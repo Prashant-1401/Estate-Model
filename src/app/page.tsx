@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
-import { useState } from "react";
 import { DashboardLayout } from "@/components/Layout";
 import { DashboardView } from "@/components/DashboardView";
 import { LeadsTable } from "@/components/LeadsTable";
@@ -25,57 +24,15 @@ export interface Lead {
   date: string;
 }
 
-const initialLeads: Lead[] = [
-  { id: "LD-1024", name: "Ahmed Al-Mansoori", phone: "+971 50 123 4567", budget: "$1.2M - $1.5M", area: "Palm Jumeirah", type: "Villa", source: "Website", status: "Hot", assigned: "Sarah M.", date: "Jul 19, 2026" },
-  { id: "LD-1025", name: "Elena Rostova", phone: "+971 55 987 6543", budget: "$800K - $1M", area: "Downtown", type: "Apartment", source: "Referral", status: "Warm", assigned: "John D.", date: "Jul 20, 2026" },
-  { id: "LD-1026", name: "Chen Wei", phone: "+971 52 456 7890", budget: "$2M+", area: "Emirates Hills", type: "Mansion", source: "Portal", status: "New", assigned: "Unassigned", date: "Jul 21, 2026" },
-];
-
-const sampleProperties = [
-  {
-    id: "1",
-    title: "Luxury 5BR Villa with Private Beach",
-    location: "Palm Jumeirah, Dubai",
-    price: "$1.45M",
-    bedrooms: 5,
-    bathrooms: 6,
-    area: "4,500",
-    type: "Villa",
-    status: "Available" as const,
-    featured: true,
-  },
-  {
-    id: "2",
-    title: "Modern 2BR Apartment with Burj View",
-    location: "Downtown Dubai",
-    price: "$850K",
-    bedrooms: 2,
-    bathrooms: 3,
-    area: "1,200",
-    type: "Apartment",
-    status: "Available" as const,
-  },
-  {
-    id: "3",
-    title: "Exclusive 8BR Mansion",
-    location: "Emirates Hills, Dubai",
-    price: "$2.8M",
-    bedrooms: 8,
-    bathrooms: 10,
-    area: "12,000",
-    type: "Mansion",
-    status: "Reserved" as const,
-  },
-];
-
 function DashboardContent() {
   const [activeView, setActiveView] = useState("dashboard");
   const [isAddLeadOpen, setIsAddLeadOpen] = useState(false);
-  const [leads, setLeads] = useState<Lead[]>(initialLeads);
+  const [leads, setLeads] = useState<Lead[]>([]);
+  const [properties, setProperties] = useState<any[]>([]);
 
   const handleAddLead = (leadData: Record<string, string>) => {
     const newLead: Lead = {
-      id: `LD-${1027 + leads.length}`,
+      id: `LD-${1000 + leads.length + 1}`,
       name: leadData.name,
       phone: leadData.phone,
       budget: leadData.budget,
@@ -113,11 +70,21 @@ function DashboardContent() {
                 Add Property
               </button>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {sampleProperties.map((property) => (
-                <PropertyCard key={property.id} {...property} />
-              ))}
-            </div>
+            {properties.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <div className="w-16 h-16 bg-[#F8FAFC] rounded-2xl flex items-center justify-center mb-4 border border-[#E2E8F0]">
+                  <span className="text-2xl">🏠</span>
+                </div>
+                <h3 className="text-lg font-medium text-[#0F172A]">No properties yet</h3>
+                <p className="text-[#64748B] mt-1 text-sm">Add your first property to get started.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {properties.map((property) => (
+                  <PropertyCard key={property.id} {...property} />
+                ))}
+              </div>
+            )}
           </div>
         );
       case "settings":
