@@ -1,5 +1,8 @@
 "use client";
 
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/lib/auth-context";
 import { useState } from "react";
 import { DashboardLayout } from "@/components/Layout";
 import { DashboardView } from "@/components/DashboardView";
@@ -65,7 +68,7 @@ const sampleProperties = [
   },
 ];
 
-export default function DashboardPage() {
+function DashboardContent() {
   const [activeView, setActiveView] = useState("dashboard");
   const [isAddLeadOpen, setIsAddLeadOpen] = useState(false);
   const [leads, setLeads] = useState<Lead[]>(initialLeads);
@@ -155,4 +158,21 @@ export default function DashboardPage() {
       />
     </>
   );
+}
+
+export default function DashboardPage() {
+  const { isAuthenticated } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      router.push("/login");
+    }
+  }, [isAuthenticated, router]);
+
+  if (!isAuthenticated) {
+    return null;
+  }
+
+  return <DashboardContent />;
 }

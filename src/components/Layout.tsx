@@ -2,12 +2,14 @@
 
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useRouter } from "next/navigation";
 import { 
   LayoutDashboard, Users, Building2, Settings, 
   HelpCircle, Search, Bell, ChevronDown, Menu, Plus,
-  FileText, X
+  FileText, X, LogOut
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/lib/auth-context";
 
 const sidebarItems = [
   { icon: LayoutDashboard, label: "Dashboard", id: "dashboard" },
@@ -20,6 +22,14 @@ const sidebarItems = [
 
 export function DashboardLayout({ children, activeView, setActiveView, onFabClick }: { children: React.ReactNode, activeView: string, setActiveView: (v: string) => void, onFabClick: () => void }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const { user, logout } = useAuth();
+  const router = useRouter();
+
+  const handleLogout = () => {
+    logout();
+    router.push("/login");
+  };
 
   return (
     <div className="flex h-screen w-full bg-[#F8FAFC] font-sans text-[#0F172A]">
@@ -77,10 +87,12 @@ export function DashboardLayout({ children, activeView, setActiveView, onFabClic
 
         <div className="p-4 border-t border-white/10">
           <div className="flex items-center gap-3 p-2 rounded-xl bg-white/5">
-            <div className="w-8 h-8 rounded-full bg-[#2563EB] flex items-center justify-center text-xs font-bold">JD</div>
+            <div className="w-8 h-8 rounded-full bg-[#2563EB] flex items-center justify-center text-xs font-bold">
+              {user?.initials || "AD"}
+            </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-white truncate">John Doe</p>
-              <p className="text-xs text-slate-400 truncate">Sales Manager</p>
+              <p className="text-sm font-medium text-white truncate">{user?.name || "Admin"}</p>
+              <p className="text-xs text-slate-400 truncate">{user?.role || "Administrator"}</p>
             </div>
           </div>
         </div>
@@ -111,10 +123,46 @@ export function DashboardLayout({ children, activeView, setActiveView, onFabClic
               <Bell size={20} />
               <span className="absolute top-2 right-2 w-2 h-2 bg-[#EF4444] rounded-full border-2 border-white"></span>
             </button>
-            <button className="flex items-center gap-2 px-2 lg:px-3 py-2 hover:bg-[#F8FAFC] rounded-xl transition-colors">
-              <div className="w-8 h-8 rounded-full bg-[#2563EB] text-white flex items-center justify-center text-sm font-semibold">JD</div>
-              <ChevronDown size={16} className="text-[#64748B] hidden lg:block" />
-            </button>
+            <div className="relative">
+              <button 
+                onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                className="flex items-center gap-2 px-2 lg:px-3 py-2 hover:bg-[#F8FAFC] rounded-xl transition-colors"
+              >
+                <div className="w-8 h-8 rounded-full bg-[#2563EB] text-white flex items-center justify-center text-sm font-semibold">
+                  {user?.initials || "AD"}
+                </div>
+                <ChevronDown size={16} className="text-[#64748B] hidden lg:block" />
+              </button>
+              
+              <AnimatePresence>
+                {isUserMenuOpen && (
+                  <>
+                    <div 
+                      className="fixed inset-0 z-40" 
+                      onClick={() => setIsUserMenuOpen(false)}
+                    />
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      className="absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-xl border border-[#E2E8F0] py-2 z-50"
+                    >
+                      <div className="px-4 py-2 border-b border-[#E2E8F0]">
+                        <p className="text-sm font-medium text-[#0F172A]">{user?.name || "Admin"}</p>
+                        <p className="text-xs text-[#64748B]">{user?.email || "admin@estatecrm.com"}</p>
+                      </div>
+                      <button
+                        onClick={handleLogout}
+                        className="w-full flex items-center gap-2 px-4 py-2 text-sm text-[#EF4444] hover:bg-red-50 transition-colors"
+                      >
+                        <LogOut size={16} />
+                        Sign out
+                      </button>
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
         </header>
 
