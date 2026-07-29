@@ -87,7 +87,7 @@ export function DashboardLayout({ children, activeView, setActiveView, onFabClic
           ))}
         </nav>
 
-        <div className="p-4 border-t border-white/10">
+        <div className="p-4 border-t border-white/10 space-y-2">
           <div className="flex items-center gap-3 p-2 rounded-xl bg-white/5">
             <div className="w-8 h-8 rounded-full bg-[#2563EB] flex items-center justify-center text-xs font-bold">
               {user?.initials || "AD"}
@@ -97,6 +97,11 @@ export function DashboardLayout({ children, activeView, setActiveView, onFabClic
               <p className="text-xs text-slate-400 truncate">{user?.role || "Administrator"}</p>
             </div>
           </div>
+          <button onClick={handleLogout}
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-[#EF4444] hover:bg-red-500/10 transition-all">
+            <LogOut size={20} />
+            Sign Out
+          </button>
         </div>
       </aside>
 
