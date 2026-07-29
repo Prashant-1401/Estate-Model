@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, User, Phone, Mail, DollarSign, MapPin, Building, Tag, Save } from "lucide-react";
+import { X, User, Phone, Mail, IndianRupee, MapPin, Building, Tag, Save } from "lucide-react";
 
 interface AddLeadCardProps {
   isOpen: boolean;
@@ -124,7 +124,7 @@ export function AddLeadCard({ isOpen, onClose, onSubmit }: AddLeadCardProps) {
               <div className="space-y-1.5">
                 <label className="text-sm font-medium text-[#0F172A]">Budget Range *</label>
                 <div className="relative">
-                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 text-[#64748B]" size={18} />
+                  <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 text-[#64748B]" size={18} />
                   <select
                     required
                     value={formData.budget}
@@ -132,11 +132,11 @@ export function AddLeadCard({ isOpen, onClose, onSubmit }: AddLeadCardProps) {
                     className="w-full pl-10 pr-4 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition-all appearance-none"
                   >
                     <option value="">Select Budget</option>
-                    <option value="500k-800k">$500K - $800K</option>
-                    <option value="800k-1m">$800K - $1M</option>
-                    <option value="1m-1.5m">$1M - $1.5M</option>
-                    <option value="1.5m-2m">$1.5M - $2M</option>
-                    <option value="2m+">$2M+</option>
+                    <option value="50l-80l">₹50L - ₹80L</option>
+                    <option value="80l-1cr">₹80L - ₹1Cr</option>
+                    <option value="1cr-1.5cr">₹1Cr - ₹1.5Cr</option>
+                    <option value="1.5cr-2cr">₹1.5Cr - ₹2Cr</option>
+                    <option value="2cr+">₹2Cr+</option>
                   </select>
                 </div>
               </div>

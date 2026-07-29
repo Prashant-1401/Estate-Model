@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { TrendingUp, TrendingDown, Users, CalendarCheck, DollarSign } from "lucide-react";
+import { TrendingUp, TrendingDown, Users, CalendarCheck, IndianRupee } from "lucide-react";
 
 export function DashboardView({ onAddLead }: { onAddLead: () => void }) {
   return (
@@ -28,7 +28,7 @@ export function DashboardView({ onAddLead }: { onAddLead: () => void }) {
           { label: "Total Leads", value: "0", change: "0%", trend: "up", icon: Users, color: "text-[#2563EB]", bg: "bg-blue-50" },
           { label: "Today's Leads", value: "0", change: "0%", trend: "up", icon: Users, color: "text-[#22C55E]", bg: "bg-green-50" },
           { label: "Hot Leads", value: "0", change: "0%", trend: "down", icon: TrendingUp, color: "text-[#F59E0B]", bg: "bg-amber-50" },
-          { label: "Revenue (MTD)", value: "$0", change: "0%", trend: "up", icon: DollarSign, color: "text-[#2563EB]", bg: "bg-blue-50" },
+          { label: "Revenue (MTD)", value: "₹0", change: "0%", trend: "up", icon: IndianRupee, color: "text-[#2563EB]", bg: "bg-blue-50" },
         ].map((stat, i) => (
           <motion.div 
             key={stat.label}

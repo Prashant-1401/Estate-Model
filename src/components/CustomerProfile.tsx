@@ -64,7 +64,7 @@ export function CustomerProfile() {
         {/* Quick Stats */}
         <div className="grid grid-cols-3 gap-4">
           {[
-            { label: "Total Budget", value: "$1.5M", icon: Star },
+            { label: "Total Budget", value: "₹1.5Cr", icon: Star },
             { label: "Properties Viewed", value: "4", icon: MapPin },
             { label: "Next Follow-up", value: "Today, 2PM", icon: Calendar },
           ].map((stat, i) => (
@@ -148,7 +148,7 @@ export function CustomerProfile() {
             {[1, 2].map((i) => (
               <div key={i} className="group border border-[#E2E8F0] rounded-xl overflow-hidden hover:shadow-md transition-all">
                 <div className="h-32 bg-slate-200 relative">
-                  <div className="absolute top-2 right-2 bg-white/90 backdrop-blur px-2 py-1 rounded-lg text-xs font-semibold text-[#0F172A]">$1.45M</div>
+                  <div className="absolute top-2 right-2 bg-white/90 backdrop-blur px-2 py-1 rounded-lg text-xs font-semibold text-[#0F172A]">₹1.45Cr</div>
                 </div>
                 <div className="p-4">
                   <h4 className="font-semibold text-[#0F172A] text-sm">Luxury 5BR Villa, Palm Jumeirah</h4>

@@ -1,8 +1,8 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Search, Filter, Download, MoreHorizontal, MessageCircle, Phone, Edit2 } from "lucide-react";
-import type { Lead } from "@/app/page";
+import { Search, Filter, Download, MoreHorizontal, MessageCircle, Phone, Edit2, Trash2 } from "lucide-react";
+import type { Lead } from "@/lib/types";
 
 const statusColors: Record<string, string> = {
   "Hot": "bg-red-50 text-[#EF4444] border border-red-100",
@@ -14,9 +14,11 @@ const statusColors: Record<string, string> = {
 interface LeadsTableProps {
   leads: Lead[];
   onAddLead: () => void;
+  onEdit?: (lead: Lead) => void;
+  onDelete?: (id: string) => void;
 }
 
-export function LeadsTable({ leads, onAddLead }: LeadsTableProps) {
+export function LeadsTable({ leads, onAddLead, onEdit, onDelete }: LeadsTableProps) {
   return (
     <div className="space-y-4 lg:space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -91,8 +93,8 @@ export function LeadsTable({ leads, onAddLead }: LeadsTableProps) {
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button className="p-2 text-[#22C55E] hover:bg-green-50 rounded-lg transition-colors" title="WhatsApp"><MessageCircle size={16} /></button>
                       <button className="p-2 text-[#2563EB] hover:bg-blue-50 rounded-lg transition-colors" title="Call"><Phone size={16} /></button>
-                      <button className="p-2 text-[#64748B] hover:bg-slate-100 rounded-lg transition-colors" title="Edit"><Edit2 size={16} /></button>
-                      <button className="p-2 text-[#64748B] hover:bg-slate-100 rounded-lg transition-colors"><MoreHorizontal size={16} /></button>
+                      {onEdit && <button onClick={() => onEdit(lead)} className="p-2 text-[#2563EB] hover:bg-blue-50 rounded-lg transition-colors" title="Edit"><Edit2 size={16} /></button>}
+                      {onDelete && <button onClick={() => onDelete(lead.id)} className="p-2 text-[#EF4444] hover:bg-red-50 rounded-lg transition-colors" title="Delete"><Trash2 size={16} /></button>}
                     </div>
                   </td>
                 </motion.tr>

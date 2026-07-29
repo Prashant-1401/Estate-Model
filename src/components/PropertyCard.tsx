@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { MapPin, Bed, Bath, Square, Heart, Share2 } from "lucide-react";
+import { MapPin, Bed, Bath, Square, Heart, Share2, Edit2, Trash2, ChevronLeft, ChevronRight, Image } from "lucide-react";
 import { useState } from "react";
 
 interface PropertyCardProps {
@@ -14,11 +14,15 @@ interface PropertyCardProps {
   area: string;
   type: string;
   status: "Available" | "Reserved" | "Sold";
-  imageUrl?: string;
+  images: string[];
   featured?: boolean;
+  onViewDetails?: (id: string) => void;
+  onEdit?: (id: string) => void;
+  onDelete?: (id: string) => void;
 }
 
 export function PropertyCard({
+  id,
   title,
   location,
   price,
@@ -27,15 +31,29 @@ export function PropertyCard({
   area,
   type,
   status,
-  imageUrl,
+  images,
   featured = false,
+  onViewDetails,
+  onEdit,
+  onDelete,
 }: PropertyCardProps) {
   const [isLiked, setIsLiked] = useState(false);
+  const [currentImage, setCurrentImage] = useState(0);
 
   const statusColors = {
     Available: "bg-[#22C55E] text-white",
     Reserved: "bg-[#F59E0B] text-white",
     Sold: "bg-[#EF4444] text-white",
+  };
+
+  const prevImage = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setCurrentImage((prev) => (prev === 0 ? images.length - 1 : prev - 1));
+  };
+
+  const nextImage = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setCurrentImage((prev) => (prev === images.length - 1 ? 0 : prev + 1));
   };
 
   return (
@@ -44,21 +62,44 @@ export function PropertyCard({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       whileHover={{ y: -4, boxShadow: "0 20px 40px -10px rgba(0,0,0,0.12)" }}
+      onClick={() => onViewDetails?.(id)}
       className="bg-white rounded-2xl border border-[#E2E8F0] overflow-hidden group cursor-pointer"
     >
       {/* Image Container */}
       <div className="relative h-48 overflow-hidden">
-        <div className={`w-full h-full ${imageUrl ? 'bg-cover bg-center' : 'bg-gradient-to-br from-slate-200 to-slate-300'}`} 
-             style={imageUrl ? { backgroundImage: `url(${imageUrl})` } : {}}>
-          {!imageUrl && (
-            <div className="w-full h-full flex items-center justify-center">
-              <span className="text-4xl opacity-30">🏢</span>
-            </div>
-          )}
-        </div>
-        
-        {/* Overlay Gradient */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+        {images.length > 0 ? (
+          <>
+            <img
+              src={images[currentImage]}
+              alt={title}
+              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+            />
+            {images.length > 1 && (
+              <>
+                <button onClick={prevImage}
+                  className="absolute left-2 top-1/2 -translate-y-1/2 p-1.5 bg-white/80 backdrop-blur rounded-full text-[#0F172A] opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white shadow-sm">
+                  <ChevronLeft size={16} />
+                </button>
+                <button onClick={nextImage}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 bg-white/80 backdrop-blur rounded-full text-[#0F172A] opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white shadow-sm">
+                  <ChevronRight size={16} />
+                </button>
+                <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5">
+                  {images.map((_, i) => (
+                    <button key={i} onClick={(e) => { e.stopPropagation(); setCurrentImage(i); }}
+                      className={`w-1.5 h-1.5 rounded-full transition-all ${
+                        i === currentImage ? "bg-white w-3" : "bg-white/60"
+                      }`} />
+                  ))}
+                </div>
+              </>
+            )}
+          </>
+        ) : (
+          <div className="w-full h-full bg-gradient-to-br from-slate-200 to-slate-300 flex items-center justify-center">
+            <Image size={40} className="text-slate-400" />
+          </div>
+        )}
 
         {/* Status Badge */}
         <div className="absolute top-3 left-3">
@@ -67,7 +108,6 @@ export function PropertyCard({
           </span>
         </div>
 
-        {/* Featured Badge */}
         {featured && (
           <div className="absolute top-3 right-3">
             <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-[#2563EB] text-white">
@@ -76,28 +116,21 @@ export function PropertyCard({
           </div>
         )}
 
-        {/* Action Buttons */}
         <div className="absolute bottom-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setIsLiked(!isLiked);
-            }}
-            className={`p-2 rounded-xl backdrop-blur-md transition-all ${
-              isLiked ? "bg-[#EF4444] text-white" : "bg-white/90 text-[#64748B] hover:text-[#EF4444]"
-            }`}
-          >
-            <Heart size={16} fill={isLiked ? "currentColor" : "none"} />
-          </button>
-          <button
-            onClick={(e) => e.stopPropagation()}
-            className="p-2 bg-white/90 backdrop-blur-md rounded-xl text-[#64748B] hover:text-[#2563EB] transition-all"
-          >
-            <Share2 size={16} />
-          </button>
+          {onEdit && (
+            <button onClick={(e) => { e.stopPropagation(); onEdit(id); }}
+              className="p-2 bg-white/90 backdrop-blur-md rounded-xl text-[#2563EB] hover:bg-[#2563EB] hover:text-white transition-all">
+              <Edit2 size={16} />
+            </button>
+          )}
+          {onDelete && (
+            <button onClick={(e) => { e.stopPropagation(); onDelete(id); }}
+              className="p-2 bg-white/90 backdrop-blur-md rounded-xl text-[#EF4444] hover:bg-[#EF4444] hover:text-white transition-all">
+              <Trash2 size={16} />
+            </button>
+          )}
         </div>
 
-        {/* Price Tag */}
         <div className="absolute bottom-3 left-3">
           <span className="text-white font-bold text-lg drop-shadow-lg">{price}</span>
         </div>
@@ -112,7 +145,6 @@ export function PropertyCard({
           <span className="line-clamp-1">{location}</span>
         </div>
 
-        {/* Property Details */}
         <div className="flex items-center gap-3 py-3 border-t border-[#E2E8F0] text-xs">
           <div className="flex items-center gap-1 text-[#64748B]">
             <Bed size={16} className="text-[#2563EB]" />
@@ -131,12 +163,11 @@ export function PropertyCard({
           </div>
         </div>
 
-        {/* Property Type Tag */}
         <div className="mt-3 flex items-center justify-between">
           <span className="text-xs font-medium px-2.5 py-1.5 bg-[#F8FAFC] text-[#64748B] rounded-lg border border-[#E2E8F0]">
             {type}
           </span>
-          <button className="text-sm font-medium text-[#2563EB] hover:text-[#1D4ED8] transition-colors">
+          <button onClick={(e) => { e.stopPropagation(); onViewDetails?.(id); }} className="text-sm font-medium text-[#2563EB] hover:text-[#1D4ED8] transition-colors">
             Details →
           </button>
         </div>
