@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { MapPin, Bed, Bath, Square, Heart, Share2, Edit2, Trash2, ChevronLeft, ChevronRight, Image } from "lucide-react";
+import { MapPin, Bed, Bath, Square, Edit2, Trash2, ChevronLeft, ChevronRight, Image } from "lucide-react";
 import { useState } from "react";
 
 interface PropertyCardProps {
@@ -37,7 +37,6 @@ export function PropertyCard({
   onEdit,
   onDelete,
 }: PropertyCardProps) {
-  const [isLiked, setIsLiked] = useState(false);
   const [currentImage, setCurrentImage] = useState(0);
 
   const statusColors = {

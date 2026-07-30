@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, MapPin, Bed, Bath, Square, Building, Heart, Share2, ChevronLeft, ChevronRight, Image, Phone, MessageCircle, Calendar } from "lucide-react";
+import { X, MapPin, Bed, Bath, Square, Heart, Share2, ChevronLeft, ChevronRight, Image, Phone, MessageCircle } from "lucide-react";
 import type { Property } from "@/lib/types";
 
 interface PropertyDetailCardProps {

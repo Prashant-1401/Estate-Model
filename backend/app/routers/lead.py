@@ -1,22 +1,31 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select, delete
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.models.lead import Lead
 from app.schemas.lead import LeadCreate, LeadRead, LeadUpdate
+from app.auth import require_role
+from app.constants import Role
 
 router = APIRouter(prefix="/api/leads", tags=["leads"])
 
 
 @router.get("", response_model=list[LeadRead])
-async def list_leads(db: AsyncSession = Depends(get_db)):
+async def list_leads(
+    db: AsyncSession = Depends(get_db),
+    _=Depends(require_role(Role.ADMIN, Role.MANAGER, Role.AGENT)),
+):
     result = await db.execute(select(Lead).order_by(Lead.created_at.desc()))
     return result.scalars().all()
 
 
 @router.get("/{lead_id}", response_model=LeadRead)
-async def get_lead(lead_id: str, db: AsyncSession = Depends(get_db)):
+async def get_lead(
+    lead_id: str,
+    db: AsyncSession = Depends(get_db),
+    _=Depends(require_role(Role.ADMIN, Role.MANAGER, Role.AGENT)),
+):
     result = await db.execute(select(Lead).where(Lead.id == lead_id))
     lead = result.scalar_one_or_none()
     if not lead:
@@ -25,7 +34,11 @@ async def get_lead(lead_id: str, db: AsyncSession = Depends(get_db)):
 
 
 @router.post("", response_model=LeadRead, status_code=201)
-async def create_lead(data: LeadCreate, db: AsyncSession = Depends(get_db)):
+async def create_lead(
+    data: LeadCreate,
+    db: AsyncSession = Depends(get_db),
+    _=Depends(require_role(Role.ADMIN, Role.MANAGER, Role.AGENT)),
+):
     lead_id = f"LD-{__import__('time').time():.6f}".replace(".", "").upper()[:12]
     lead = Lead(id=lead_id, **data.model_dump())
     db.add(lead)
@@ -35,7 +48,12 @@ async def create_lead(data: LeadCreate, db: AsyncSession = Depends(get_db)):
 
 
 @router.put("/{lead_id}", response_model=LeadRead)
-async def update_lead(lead_id: str, data: LeadUpdate, db: AsyncSession = Depends(get_db)):
+async def update_lead(
+    lead_id: str,
+    data: LeadUpdate,
+    db: AsyncSession = Depends(get_db),
+    _=Depends(require_role(Role.ADMIN, Role.MANAGER)),
+):
     result = await db.execute(select(Lead).where(Lead.id == lead_id))
     lead = result.scalar_one_or_none()
     if not lead:
@@ -48,7 +66,11 @@ async def update_lead(lead_id: str, data: LeadUpdate, db: AsyncSession = Depends
 
 
 @router.delete("/{lead_id}", status_code=204)
-async def delete_lead(lead_id: str, db: AsyncSession = Depends(get_db)):
+async def delete_lead(
+    lead_id: str,
+    db: AsyncSession = Depends(get_db),
+    _=Depends(require_role(Role.ADMIN, Role.MANAGER)),
+):
     result = await db.execute(select(Lead).where(Lead.id == lead_id))
     lead = result.scalar_one_or_none()
     if not lead:

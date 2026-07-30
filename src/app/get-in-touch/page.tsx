@@ -3,31 +3,34 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { Building2, Phone, Mail, MapPin, IndianRupee, Send, CheckCircle, User } from "lucide-react";
-import type { Lead } from "@/lib/types";
+import { api } from "@/lib/api";
 
 export default function GetInTouchPage() {
   const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState("");
   const [formData, setFormData] = useState({
     name: "", phone: "", email: "", budget: "", area: "", propertyType: "", message: "",
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const newLead: Lead = {
-      id: `LD-${Date.now().toString(36).toUpperCase()}`,
-      name: formData.name,
-      phone: formData.phone,
-      budget: formData.budget,
-      area: formData.area,
-      type: formData.propertyType,
-      source: "Website",
-      status: "New",
-      assigned: "Unassigned",
-      date: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
-    };
-    const existing = JSON.parse(localStorage.getItem("estatecrm_leads") || "[]");
-    localStorage.setItem("estatecrm_leads", JSON.stringify([newLead, ...existing]));
-    setSubmitted(true);
+    setError("");
+    try {
+      await api.post("/api/leads", {
+        name: formData.name,
+        phone: formData.phone,
+        budget: formData.budget,
+        area: formData.area,
+        type: formData.propertyType,
+        source: "Website",
+        status: "New",
+        assigned: "Unassigned",
+        date: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+      });
+      setSubmitted(true);
+    } catch {
+      setError("Something went wrong. Please try again later.");
+    }
   };
 
   if (submitted) {
@@ -148,6 +151,9 @@ export default function GetInTouchPage() {
               placeholder="Tell us about your requirements..." />
           </div>
 
+          {error && (
+            <p className="text-[#EF4444] text-sm text-center bg-red-50 py-2 rounded-lg">{error}</p>
+          )}
           <button type="submit"
             className="w-full flex items-center justify-center gap-2 py-3 bg-[#2563EB] text-white rounded-xl text-sm font-medium hover:bg-[#1D4ED8] shadow-lg shadow-blue-500/20 transition-all">
             <Send size={18} />

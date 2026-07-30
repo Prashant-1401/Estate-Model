@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Building2, MapPin, Users, IndianRupee, Calendar, FileText, Save } from "lucide-react";
+import { X, Building2, MapPin, Users, IndianRupee, Save } from "lucide-react";
 import type { Project } from "@/lib/types";
 
 interface EditProjectCardProps {
@@ -14,27 +14,17 @@ interface EditProjectCardProps {
 
 export function EditProjectCard({ isOpen, onClose, onSubmit, project }: EditProjectCardProps) {
   const [formData, setFormData] = useState({
-    name: "", developer: "", location: "", totalUnits: "", unitsSold: "",
-    launchDate: "", completionDate: "", priceRange: "", description: "",
-    status: "Planning" as Project["status"],
+    name: project?.name || "",
+    developer: project?.developer || "",
+    location: project?.location || "",
+    totalUnits: project?.total_units?.toString() || "",
+    unitsSold: project?.units_sold?.toString() || "",
+    launchDate: project?.launch_date || "",
+    completionDate: project?.completion_date || "",
+    priceRange: project?.price_range || "",
+    description: project?.description || "",
+    status: project?.status || "Planning",
   });
-
-  useEffect(() => {
-    if (project) {
-      setFormData({
-        name: project.name,
-        developer: project.developer,
-        location: project.location,
-        totalUnits: project.totalUnits.toString(),
-        unitsSold: project.unitsSold.toString(),
-        launchDate: project.launchDate,
-        completionDate: project.completionDate,
-        priceRange: project.priceRange,
-        description: project.description,
-        status: project.status,
-      });
-    }
-  }, [project]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,11 +35,11 @@ export function EditProjectCard({ isOpen, onClose, onSubmit, project }: EditProj
       developer: formData.developer,
       location: formData.location,
       status: formData.status,
-      totalUnits: parseInt(formData.totalUnits) || 0,
-      unitsSold: parseInt(formData.unitsSold) || 0,
-      launchDate: formData.launchDate,
-      completionDate: formData.completionDate,
-      priceRange: formData.priceRange,
+      total_units: parseInt(formData.totalUnits) || 0,
+      units_sold: parseInt(formData.unitsSold) || 0,
+      launch_date: formData.launchDate,
+      completion_date: formData.completionDate,
+      price_range: formData.priceRange,
       description: formData.description,
     };
     onSubmit(project.id, updated);

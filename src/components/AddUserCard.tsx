@@ -4,23 +4,13 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, User, Mail, Phone, Shield, Key, Save } from "lucide-react";
 
-interface UserData {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  role: string;
-  status: "Active" | "Inactive";
-  created: string;
-}
-
 interface AddUserCardProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (user: UserData) => void;
+  onSubmit: (user: Record<string, string>) => void;
 }
 
-const roles = ["Administrator", "Agent", "Manager", "Viewer"];
+const roles = ["admin", "manager", "agent"];
 
 export function AddUserCard({ isOpen, onClose, onSubmit }: AddUserCardProps) {
   const [formData, setFormData] = useState({
@@ -28,23 +18,20 @@ export function AddUserCard({ isOpen, onClose, onSubmit }: AddUserCardProps) {
     email: "",
     phone: "",
     password: "",
-    role: "Agent",
+    role: "agent",
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const user: UserData = {
-      id: `UR-${Date.now().toString(36).toUpperCase()}`,
+    onSubmit({
       name: formData.name,
       email: formData.email,
       phone: formData.phone,
+      password: formData.password,
       role: formData.role,
-      status: "Active",
-      created: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
-    };
-    onSubmit(user);
+    });
     onClose();
-    setFormData({ name: "", email: "", phone: "", password: "", role: "Agent" });
+    setFormData({ name: "", email: "", phone: "", password: "", role: "agent" });
   };
 
   if (!isOpen) return null;

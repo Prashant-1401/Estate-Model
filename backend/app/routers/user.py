@@ -4,19 +4,58 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.models.user import User
-from app.schemas.user import UserCreate, UserRead, UserUpdate
+from app.schemas.user import UserCreate, UserRead, UserUpdate, LoginRequest, TokenResponse
+from app.auth import hash_password, verify_password, create_access_token, get_current_user, require_role
+from app.constants import Role
 
 router = APIRouter(prefix="/api/users", tags=["users"])
+auth_router = APIRouter(prefix="/api/auth", tags=["auth"])
+
+
+@auth_router.post("/login", response_model=TokenResponse)
+async def login(data: LoginRequest, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(User).where(User.email == data.email))
+    user = result.scalar_one_or_none()
+    if not user or not verify_password(data.password, user.hashed_password):
+        raise HTTPException(401, detail="Invalid email or password")
+
+    token = create_access_token({"sub": user.id})
+    return TokenResponse(
+        access_token=token,
+        user=UserRead(
+            id=user.id,
+            name=user.name,
+            email=user.email,
+            phone=user.phone,
+            role=user.role,
+            status=user.status,
+            created=user.created,
+            created_at=user.created_at,
+            updated_at=user.updated_at,
+        ),
+    )
+
+
+@auth_router.get("/me", response_model=UserRead)
+async def me(current_user: User = Depends(get_current_user)):
+    return current_user
 
 
 @router.get("", response_model=list[UserRead])
-async def list_users(db: AsyncSession = Depends(get_db)):
+async def list_users(
+    db: AsyncSession = Depends(get_db),
+    _=Depends(require_role(Role.ADMIN, Role.MANAGER)),
+):
     result = await db.execute(select(User).order_by(User.created_at.desc()))
     return result.scalars().all()
 
 
 @router.get("/{user_id}", response_model=UserRead)
-async def get_user(user_id: str, db: AsyncSession = Depends(get_db)):
+async def get_user(
+    user_id: str,
+    db: AsyncSession = Depends(get_db),
+    _=Depends(require_role(Role.ADMIN, Role.MANAGER)),
+):
     result = await db.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
     if not user:
@@ -25,9 +64,26 @@ async def get_user(user_id: str, db: AsyncSession = Depends(get_db)):
 
 
 @router.post("", response_model=UserRead, status_code=201)
-async def create_user(data: UserCreate, db: AsyncSession = Depends(get_db)):
+async def create_user(
+    data: UserCreate,
+    db: AsyncSession = Depends(get_db),
+    _=Depends(require_role(Role.ADMIN)),
+):
+    existing = await db.execute(select(User).where(User.email == data.email))
+    if existing.scalar_one_or_none():
+        raise HTTPException(409, detail="Email already exists")
+
     user_id = f"UR-{__import__('time').time():.6f}".replace(".", "").upper()[:12]
-    user = User(id=user_id, **data.model_dump())
+    user = User(
+        id=user_id,
+        name=data.name,
+        email=data.email,
+        phone=data.phone,
+        role=data.role,
+        status=data.status,
+        created=data.created,
+        hashed_password=hash_password(data.password),
+    )
     db.add(user)
     await db.commit()
     await db.refresh(user)
@@ -35,7 +91,12 @@ async def create_user(data: UserCreate, db: AsyncSession = Depends(get_db)):
 
 
 @router.put("/{user_id}", response_model=UserRead)
-async def update_user(user_id: str, data: UserUpdate, db: AsyncSession = Depends(get_db)):
+async def update_user(
+    user_id: str,
+    data: UserUpdate,
+    db: AsyncSession = Depends(get_db),
+    _=Depends(require_role(Role.ADMIN)),
+):
     result = await db.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
     if not user:
@@ -48,7 +109,11 @@ async def update_user(user_id: str, data: UserUpdate, db: AsyncSession = Depends
 
 
 @router.delete("/{user_id}", status_code=204)
-async def delete_user(user_id: str, db: AsyncSession = Depends(get_db)):
+async def delete_user(
+    user_id: str,
+    db: AsyncSession = Depends(get_db),
+    _=Depends(require_role(Role.ADMIN)),
+):
     result = await db.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
     if not user:

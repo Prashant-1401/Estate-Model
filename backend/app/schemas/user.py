@@ -1,18 +1,18 @@
 from datetime import datetime
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 
 
 class UserBase(BaseModel):
     name: str
     email: str
     phone: str = ""
-    role: str = "Agent"
+    role: str = "agent"
     status: str = "Active"
     created: str = ""
 
 
 class UserCreate(UserBase):
-    pass
+    password: str
 
 
 class UserUpdate(BaseModel):
@@ -29,3 +29,14 @@ class UserRead(UserBase):
     updated_at: datetime | None = None
 
     model_config = {"from_attributes": True}
+
+
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    user: UserRead

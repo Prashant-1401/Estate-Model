@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
+import { api } from "@/lib/api";
 import { DashboardLayout } from "@/components/Layout";
 import { DashboardView } from "@/components/DashboardView";
 import { LeadsTable } from "@/components/LeadsTable";
@@ -19,9 +20,12 @@ import { EditLeadCard } from "@/components/EditLeadCard";
 import { EditPropertyCard } from "@/components/EditPropertyCard";
 import { EditProjectCard } from "@/components/EditProjectCard";
 import { Plus, Building2 as ProjectIcon, Edit2, Trash2 } from "lucide-react";
-import type { Property, Project, Lead } from "@/lib/types";
+import type { Property, Project, Lead, UserData } from "@/lib/types";
+import { InquiryTable } from "@/components/InquiryTable";
+import type { Inquiry } from "@/lib/types";
 
 function DashboardContent() {
+  const { hasRole } = useAuth();
   const [activeView, setActiveView] = useState("dashboard");
   const [isAddLeadOpen, setIsAddLeadOpen] = useState(false);
   const [isAddPropertyOpen, setIsAddPropertyOpen] = useState(false);
@@ -33,100 +37,146 @@ function DashboardContent() {
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{ type: string; id: string } | null>(null);
   const [leads, setLeads] = useState<Lead[]>([]);
-  const [users, setUsers] = useState<any[]>([]);
+  const [users, setUsers] = useState<UserData[]>([]);
   const [properties, setProperties] = useState<Property[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [inquiries, setInquiries] = useState<Inquiry[]>([]);
+
+  async function reload() {
+    const [l, p, pr, u, i] = await Promise.all([
+      api.get<Lead[]>("/api/leads").catch(() => [] as Lead[]),
+      api.get<Property[]>("/api/properties").catch(() => [] as Property[]),
+      api.get<Project[]>("/api/projects").catch(() => [] as Project[]),
+      api.get<UserData[]>("/api/users").catch(() => [] as UserData[]),
+      api.get<Inquiry[]>("/api/inquiries").catch(() => [] as Inquiry[]),
+    ]);
+    setLeads(l);
+    setProperties(p);
+    setProjects(pr);
+    setUsers(u);
+    setInquiries(i);
+  }
+
   useEffect(() => {
-    const storedLeads = JSON.parse(localStorage.getItem("estatecrm_leads") || "[]");
-    setLeads(storedLeads);
-    const storedProperties = JSON.parse(localStorage.getItem("estatecrm_properties") || "[]");
-    setProperties(storedProperties);
-    const storedProjects = JSON.parse(localStorage.getItem("estatecrm_projects") || "[]");
-    setProjects(storedProjects);
-    const storedUsers = JSON.parse(localStorage.getItem("estatecrm_users") || "[]");
-    setUsers(storedUsers);
+    let cancelled = false;
+    (async () => {
+      await reload();
+      if (cancelled) return;
+    })();
+    return () => { cancelled = true; };
   }, []);
 
-  const handleAddLead = (leadData: Record<string, string>) => {
-    const newLead: Lead = {
-      id: `LD-${Date.now().toString(36).toUpperCase()}`,
-      name: leadData.name,
-      phone: leadData.phone,
-      budget: leadData.budget,
-      area: leadData.area,
-      type: leadData.propertyType,
-      source: leadData.source || "Direct",
-      status: "New",
-      assigned: "Unassigned",
-      date: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
-    };
-    const updated = [newLead, ...leads];
-    setLeads(updated);
-    localStorage.setItem("estatecrm_leads", JSON.stringify(updated));
+  const handleAddLead = async (leadData: Record<string, string>) => {
+    try {
+      await api.post("/api/leads", {
+        name: leadData.name,
+        phone: leadData.phone,
+        budget: leadData.budget,
+        area: leadData.area,
+        type: leadData.propertyType,
+        source: leadData.source || "Direct",
+        status: "New",
+        assigned: "Unassigned",
+        date: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+      });
+      await reload();
+    } catch {}
   };
 
-  const handleAddProperty = (property: Property) => {
-    const updated = [...properties, property];
-    setProperties(updated);
-    localStorage.setItem("estatecrm_properties", JSON.stringify(updated));
+  const handleAddProperty = async (property: Property) => {
+    try {
+      await api.post("/api/properties", property);
+      await reload();
+    } catch {}
   };
 
-  const handleAddProject = (project: Project) => {
-    const updated = [...projects, project];
-    setProjects(updated);
-    localStorage.setItem("estatecrm_projects", JSON.stringify(updated));
+  const handleAddProject = async (project: Project) => {
+    try {
+      await api.post("/api/projects", project);
+      await reload();
+    } catch {}
   };
 
-  const handleAddUser = (user: any) => {
-    const updated = [user, ...users];
-    setUsers(updated);
-    localStorage.setItem("estatecrm_users", JSON.stringify(updated));
+  const handleAddUser = async (data: Record<string, string>) => {
+    try {
+      await api.post("/api/users", {
+        name: data.name,
+        email: data.email,
+        phone: data.phone,
+        role: data.role,
+        password: data.password,
+      });
+      await reload();
+    } catch {}
   };
 
-  const handleEditLead = (id: string, data: Record<string, string>) => {
-    const updated = leads.map((l) => l.id === id ? { ...l, name: data.name, phone: data.phone, budget: data.budget, area: data.area, type: data.propertyType, source: data.source, status: data.status as Lead["status"] } : l);
-    setLeads(updated);
-    localStorage.setItem("estatecrm_leads", JSON.stringify(updated));
+  const handleEditLead = async (id: string, data: Record<string, string>) => {
+    try {
+      await api.put(`/api/leads/${id}`, {
+        name: data.name,
+        phone: data.phone,
+        budget: data.budget,
+        area: data.area,
+        type: data.propertyType,
+        source: data.source,
+        status: data.status,
+      });
+      await reload();
+    } catch {}
   };
 
-  const handleEditProperty = (id: string, property: Property) => {
-    const updated = properties.map((p) => p.id === id ? property : p);
-    setProperties(updated);
-    localStorage.setItem("estatecrm_properties", JSON.stringify(updated));
+  const handleEditProperty = async (id: string, property: Property) => {
+    try {
+      await api.put(`/api/properties/${id}`, property);
+      await reload();
+    } catch {}
   };
 
-  const handleEditProject = (id: string, project: Project) => {
-    const updated = projects.map((p) => p.id === id ? project : p);
-    setProjects(updated);
-    localStorage.setItem("estatecrm_projects", JSON.stringify(updated));
+  const handleEditProject = async (id: string, project: Project) => {
+    try {
+      await api.put(`/api/projects/${id}`, project);
+      await reload();
+    } catch {}
   };
 
-  const handleDelete = (type: string, id: string) => {
-    if (type === "lead") {
-      const updated = leads.filter((l) => l.id !== id);
-      setLeads(updated);
-      localStorage.setItem("estatecrm_leads", JSON.stringify(updated));
-    } else if (type === "property") {
-      const updated = properties.filter((p) => p.id !== id);
-      setProperties(updated);
-      localStorage.setItem("estatecrm_properties", JSON.stringify(updated));
-    } else if (type === "project") {
-      const updated = projects.filter((p) => p.id !== id);
-      setProjects(updated);
-      localStorage.setItem("estatecrm_projects", JSON.stringify(updated));
-    }
+  const handleDelete = async (type: string, id: string) => {
+    try {
+      const endpoint = type === "lead" ? "leads" : type === "property" ? "properties" : type === "project" ? "projects" : null;
+      if (endpoint) {
+        await api.delete(`/api/${endpoint}/${id}`);
+        await reload();
+      }
+    } catch {}
     setDeleteConfirm(null);
   };
 
+  const canManage = hasRole("admin", "manager");
+
   const renderView = () => {
     switch (activeView) {
-      case "dashboard": 
+      case "dashboard":
         return <DashboardView onAddLead={() => setIsAddLeadOpen(true)} />;
-      case "leads": 
-        return <LeadsTable leads={leads} onAddLead={() => setIsAddLeadOpen(true)} onEdit={(lead) => setEditingLead(lead)} onDelete={(id) => setDeleteConfirm({ type: "lead", id })} />;
-      case "customers": 
+      case "leads":
+        return (
+          <LeadsTable
+            leads={leads}
+            onAddLead={() => setIsAddLeadOpen(true)}
+            onEdit={canManage ? (lead) => setEditingLead(lead) : undefined}
+            onDelete={canManage ? (id) => setDeleteConfirm({ type: "lead", id }) : undefined}
+          />
+        );
+      case "inquiries":
+        return <InquiryTable inquiries={inquiries} />;
+      case "customers":
         return <CustomerProfile />;
       case "users":
+        if (!hasRole("admin")) {
+          return (
+            <div className="flex items-center justify-center h-[60vh] text-[#64748B]">
+              You do not have permission to view this page.
+            </div>
+          );
+        }
         return <UsersTable users={users} onAddUser={() => setIsAddUserOpen(true)} />;
       case "properties":
         return (
@@ -136,13 +186,15 @@ function DashboardContent() {
                 <h1 className="text-2xl font-semibold text-[#0F172A]">Properties</h1>
                 <p className="text-[#64748B] mt-1 text-sm">Browse and manage property listings</p>
               </div>
-              <button 
-                onClick={() => setIsAddPropertyOpen(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-[#2563EB] text-white rounded-xl text-sm font-medium hover:bg-[#1D4ED8] shadow-lg shadow-blue-500/20 transition-all"
-              >
-                <Plus size={18} />
-                Add Property
-              </button>
+              {canManage && (
+                <button
+                  onClick={() => setIsAddPropertyOpen(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-[#2563EB] text-white rounded-xl text-sm font-medium hover:bg-[#1D4ED8] shadow-lg shadow-blue-500/20 transition-all"
+                >
+                  <Plus size={18} />
+                  Add Property
+                </button>
+              )}
             </div>
             {properties.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-center">
@@ -155,16 +207,28 @@ function DashboardContent() {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {properties.map((property) => (
-                  <PropertyCard key={property.id} {...property}
+                  <PropertyCard
+                    key={property.id}
+                    id={property.id}
+                    title={property.title}
+                    location={property.location}
+                    price={property.price}
+                    bedrooms={property.bedrooms}
+                    bathrooms={property.bathrooms}
+                    area={property.area}
+                    type={property.type}
+                    status={property.status}
+                    images={property.images}
+                    featured={property.featured}
                     onViewDetails={(id) => {
-                      const p = properties.find(pr => pr.id === id);
+                      const p = properties.find((pr) => pr.id === id);
                       if (p) setSelectedProperty(p);
                     }}
-                    onEdit={(id) => {
-                      const p = properties.find(pr => pr.id === id);
+                    onEdit={canManage ? (id) => {
+                      const p = properties.find((pr) => pr.id === id);
                       if (p) setEditingProperty(p);
-                    }}
-                    onDelete={(id) => setDeleteConfirm({ type: "property", id })}
+                    } : undefined}
+                    onDelete={canManage ? (id) => setDeleteConfirm({ type: "property", id }) : undefined}
                   />
                 ))}
               </div>
@@ -179,13 +243,15 @@ function DashboardContent() {
                 <h1 className="text-2xl font-semibold text-[#0F172A]">Projects</h1>
                 <p className="text-[#64748B] mt-1 text-sm">Track and manage development projects</p>
               </div>
-              <button
-                onClick={() => setIsAddProjectOpen(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-[#2563EB] text-white rounded-xl text-sm font-medium hover:bg-[#1D4ED8] shadow-lg shadow-blue-500/20 transition-all"
-              >
-                <Plus size={18} />
-                Add Project
-              </button>
+              {canManage && (
+                <button
+                  onClick={() => setIsAddProjectOpen(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-[#2563EB] text-white rounded-xl text-sm font-medium hover:bg-[#1D4ED8] shadow-lg shadow-blue-500/20 transition-all"
+                >
+                  <Plus size={18} />
+                  Add Project
+                </button>
+              )}
             </div>
             {projects.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-center">
@@ -224,19 +290,21 @@ function DashboardContent() {
                               {project.status}
                             </span>
                           </td>
-                          <td className="px-6 py-4 text-sm text-[#0F172A] font-medium">{project.totalUnits}</td>
-                          <td className="px-6 py-4 text-sm text-[#64748B]">{project.unitsSold}</td>
-                          <td className="px-6 py-4 text-sm text-[#0F172A] font-medium">{project.priceRange}</td>
-                          <td className="px-6 py-4 text-sm text-[#64748B]">{project.completionDate}</td>
+                          <td className="px-6 py-4 text-sm text-[#0F172A] font-medium">{project.total_units}</td>
+                          <td className="px-6 py-4 text-sm text-[#64748B]">{project.units_sold}</td>
+                          <td className="px-6 py-4 text-sm text-[#0F172A] font-medium">{project.price_range}</td>
+                          <td className="px-6 py-4 text-sm text-[#64748B]">{project.completion_date}</td>
                           <td className="px-6 py-4">
-                            <div className="flex items-center gap-1">
-                              <button onClick={() => setEditingProject(project)} className="p-2 text-[#2563EB] hover:bg-blue-50 rounded-lg transition-colors" title="Edit">
-                                <Edit2 size={16} />
-                              </button>
-                              <button onClick={() => setDeleteConfirm({ type: "project", id: project.id })} className="p-2 text-[#EF4444] hover:bg-red-50 rounded-lg transition-colors" title="Delete">
-                                <Trash2 size={16} />
-                              </button>
-                            </div>
+                            {canManage && (
+                              <div className="flex items-center gap-1">
+                                <button onClick={() => setEditingProject(project)} className="p-2 text-[#2563EB] hover:bg-blue-50 rounded-lg transition-colors" title="Edit">
+                                  <Edit2 size={16} />
+                                </button>
+                                <button onClick={() => setDeleteConfirm({ type: "project", id: project.id })} className="p-2 text-[#EF4444] hover:bg-red-50 rounded-lg transition-colors" title="Delete">
+                                  <Trash2 size={16} />
+                                </button>
+                              </div>
+                            )}
                           </td>
                         </tr>
                       ))}
@@ -267,7 +335,7 @@ function DashboardContent() {
             <p className="text-[#64748B] mt-2 max-w-md">Get help with using the CRM.</p>
           </div>
         );
-      default: 
+      default:
         return <DashboardView onAddLead={() => setIsAddLeadOpen(true)} />;
     }
   };
@@ -277,8 +345,8 @@ function DashboardContent() {
       <DashboardLayout activeView={activeView} setActiveView={setActiveView} onFabClick={() => setIsAddLeadOpen(true)}>
         {renderView()}
       </DashboardLayout>
-      
-      <AddLeadCard 
+
+      <AddLeadCard
         isOpen={isAddLeadOpen}
         onClose={() => setIsAddLeadOpen(false)}
         onSubmit={handleAddLead}
@@ -309,6 +377,7 @@ function DashboardContent() {
       />
 
       <EditLeadCard
+        key={editingLead?.id ?? 'closed'}
         isOpen={!!editingLead}
         onClose={() => setEditingLead(null)}
         onSubmit={handleEditLead}
@@ -316,6 +385,7 @@ function DashboardContent() {
       />
 
       <EditPropertyCard
+        key={editingProperty?.id ?? 'closed'}
         isOpen={!!editingProperty}
         onClose={() => setEditingProperty(null)}
         onSubmit={handleEditProperty}
@@ -323,6 +393,7 @@ function DashboardContent() {
       />
 
       <EditProjectCard
+        key={editingProject?.id ?? 'closed'}
         isOpen={!!editingProject}
         onClose={() => setEditingProject(null)}
         onSubmit={handleEditProject}

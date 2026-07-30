@@ -10,12 +10,17 @@ from app.models.property import Property
 from app.models.project import Project
 from app.models.user import User
 from app.schemas.dashboard import DashboardStats
+from app.auth import require_role
+from app.constants import Role
 
 router = APIRouter(prefix="/api/dashboard", tags=["dashboard"])
 
 
 @router.get("/stats", response_model=DashboardStats)
-async def get_dashboard_stats(db: AsyncSession = Depends(get_db)):
+async def get_dashboard_stats(
+    db: AsyncSession = Depends(get_db),
+    _=Depends(require_role(Role.ADMIN, Role.MANAGER, Role.AGENT)),
+):
     total_leads = (await db.execute(select(func.count(Lead.id)))).scalar() or 0
 
     today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)

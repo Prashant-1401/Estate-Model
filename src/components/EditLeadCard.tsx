@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, User, Phone, Mail, IndianRupee, MapPin, Building, Tag, Save } from "lucide-react";
 import type { Lead } from "@/lib/types";
@@ -14,24 +14,16 @@ interface EditLeadCardProps {
 
 export function EditLeadCard({ isOpen, onClose, onSubmit, lead }: EditLeadCardProps) {
   const [formData, setFormData] = useState({
-    name: "", phone: "", email: "", budget: "", area: "", propertyType: "", source: "", notes: "", status: "New" as string,
+    name: lead?.name || "",
+    phone: lead?.phone || "",
+    email: "",
+    budget: lead?.budget || "",
+    area: lead?.area || "",
+    propertyType: lead?.type || "",
+    source: lead?.source || "",
+    notes: "",
+    status: (lead?.status || "New") as string,
   });
-
-  useEffect(() => {
-    if (lead) {
-      setFormData({
-        name: lead.name,
-        phone: lead.phone,
-        email: "",
-        budget: lead.budget,
-        area: lead.area,
-        propertyType: lead.type,
-        source: lead.source,
-        notes: "",
-        status: lead.status,
-      });
-    }
-  }, [lead]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

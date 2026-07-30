@@ -1,63 +1,81 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from "react";
-
-interface User {
-  email: string;
-  name: string;
-  role: string;
-  initials: string;
-}
+import type { AuthUser, Role } from "@/lib/types";
+import { api } from "@/lib/api";
 
 interface AuthContextType {
-  user: User | null;
-  login: (email: string, password: string) => boolean;
+  user: AuthUser | null;
+  login: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
   isAuthenticated: boolean;
+  hasRole: (...roles: Role[]) => boolean;
+}
+
+interface LoginResponse {
+  access_token: string;
+  token_type: string;
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    phone: string;
+    role: Role;
+    status: string;
+  };
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const ADMIN_CREDENTIALS = {
-  email: "admin@estatecrm.com",
-  password: "admin123",
-};
-
-const ADMIN_USER: User = {
-  email: ADMIN_CREDENTIALS.email,
-  name: "Admin",
-  role: "Administrator",
-  initials: "AD",
-};
+function getInitials(name: string): string {
+  return name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
-    const stored = localStorage.getItem("estatecrm_user");
-    if (stored) {
-      try {
-        setUser(JSON.parse(stored));
-      } catch {
-        localStorage.removeItem("estatecrm_user");
+    let cancelled = false;
+    (async () => {
+      const token = localStorage.getItem("estatecrm_token");
+      if (token) {
+        try {
+          const u = await api.get<LoginResponse["user"]>("/api/auth/me");
+          if (!cancelled) setUser({ ...u, initials: getInitials(u.name) });
+        } catch {
+          localStorage.removeItem("estatecrm_token");
+        }
       }
-    }
-    setIsLoaded(true);
+      if (!cancelled) setIsLoaded(true);
+    })();
+    return () => { cancelled = true; };
   }, []);
 
-  const login = (email: string, password: string): boolean => {
-    if (email === ADMIN_CREDENTIALS.email && password === ADMIN_CREDENTIALS.password) {
-      setUser(ADMIN_USER);
-      localStorage.setItem("estatecrm_user", JSON.stringify(ADMIN_USER));
+  const login = async (email: string, password: string): Promise<boolean> => {
+    try {
+      const res = await api.post<LoginResponse>("/api/auth/login", { email, password });
+      localStorage.setItem("estatecrm_token", res.access_token);
+      setUser({ ...res.user, initials: getInitials(res.user.name) });
       return true;
+    } catch {
+      return false;
     }
-    return false;
   };
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem("estatecrm_user");
+    localStorage.removeItem("estatecrm_token");
+  };
+
+  const hasRole = (...roles: Role[]) => {
+    if (!user) return false;
+    return roles.includes(user.role);
   };
 
   if (!isLoaded) {
@@ -65,7 +83,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, isAuthenticated: !!user }}>
+    <AuthContext.Provider value={{ user, login, logout, isAuthenticated: !!user, hasRole }}>
       {children}
     </AuthContext.Provider>
   );

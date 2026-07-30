@@ -1,3 +1,5 @@
+export type Role = "admin" | "manager" | "agent";
+
 export type ProjectStatus = "Planning" | "Under Construction" | "Completed" | "On Hold";
 
 export interface Project {
@@ -6,11 +8,11 @@ export interface Project {
   developer: string;
   location: string;
   status: ProjectStatus;
-  totalUnits: number;
-  unitsSold: number;
-  launchDate: string;
-  completionDate: string;
-  priceRange: string;
+  total_units: number;
+  units_sold: number;
+  launch_date: string;
+  completion_date: string;
+  price_range: string;
   description: string;
 }
 
@@ -19,7 +21,7 @@ export interface UserData {
   name: string;
   email: string;
   phone: string;
-  role: string;
+  role: Role;
   status: "Active" | "Inactive";
   created: string;
 }
@@ -35,8 +37,8 @@ export interface Lead {
   status: "Hot" | "Warm" | "New" | "Cold";
   assigned: string;
   date: string;
-  propertyId?: string;
-  assignedTo?: string;
+  property_id?: string;
+  assigned_to?: string;
 }
 
 export interface Property {
@@ -51,7 +53,7 @@ export interface Property {
   status: "Available" | "Reserved" | "Sold";
   images: string[];
   featured?: boolean;
-  projectId?: string;
+  project_id?: string;
 }
 
 export interface Inquiry {
@@ -59,11 +61,21 @@ export interface Inquiry {
   name: string;
   phone: string;
   email: string;
-  propertyType: string;
+  property_type: string;
   area: string;
   budget: string;
   message: string;
   source: string;
   status: "New" | "Contacted" | "Closed";
   date: string;
+}
+
+export interface AuthUser {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  role: Role;
+  status: string;
+  initials: string;
 }

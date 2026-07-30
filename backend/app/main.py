@@ -6,12 +6,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.database import engine, Base
 from app.routers import lead, property, project, user, inquiry, dashboard
+from app.seed import seed_users
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+    await seed_users()
     yield
     await engine.dispose()
 
@@ -26,6 +28,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(user.auth_router)
 app.include_router(lead.router)
 app.include_router(property.router)
 app.include_router(project.router)

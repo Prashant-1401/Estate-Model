@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Search, Filter, Download, MoreHorizontal, Shield, UserCheck, UserX } from "lucide-react";
+import { Search, Download, MoreHorizontal, Shield, UserCheck, UserX } from "lucide-react";
 
 interface UserData {
   id: string;

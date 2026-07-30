@@ -88,7 +88,7 @@ export function InquiryTable({ inquiries }: InquiryTableProps) {
                     <td className="px-6 py-4">
                       <span className="flex items-center gap-1.5 text-sm text-[#0F172A]">
                         <Building size={14} className="text-[#64748B]" />
-                        {inq.propertyType}
+                        {inq.property_type}
                       </span>
                     </td>
                     <td className="px-6 py-4">
@@ -169,9 +169,9 @@ export function InquiryTable({ inquiries }: InquiryTableProps) {
               </div>
 
               <div className="grid grid-cols-2 gap-2 mb-4 text-sm">
-                <div className="flex items-center gap-1.5 text-[#64748B]">
+                  <div className="flex items-center gap-1.5 text-[#64748B]">
                   <Building size={14} />
-                  <span>{inq.propertyType}</span>
+                  <span>{inq.property_type}</span>
                 </div>
                 <div className="flex items-center gap-1.5 text-[#64748B]">
                   <MapPin size={14} />

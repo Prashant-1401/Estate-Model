@@ -33,11 +33,11 @@ export function AddProjectCard({ isOpen, onClose, onSubmit }: AddProjectCardProp
       developer: formData.developer,
       location: formData.location,
       status: formData.status,
-      totalUnits: parseInt(formData.totalUnits) || 0,
-      unitsSold: parseInt(formData.unitsSold) || 0,
-      launchDate: formData.launchDate,
-      completionDate: formData.completionDate,
-      priceRange: formData.priceRange,
+      total_units: parseInt(formData.totalUnits) || 0,
+      units_sold: parseInt(formData.unitsSold) || 0,
+      launch_date: formData.launchDate,
+      completion_date: formData.completionDate,
+      price_range: formData.priceRange,
       description: formData.description,
     };
     onSubmit(project);

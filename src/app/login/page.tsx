@@ -20,9 +20,7 @@ export default function LoginPage() {
     setError("");
     setIsLoading(true);
 
-    await new Promise((r) => setTimeout(r, 500));
-
-    const success = login(email, password);
+    const success = await login(email, password);
     if (success) {
       router.push("/");
     } else {

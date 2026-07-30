@@ -10,23 +10,36 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
+import type { Role } from "@/lib/types";
 
-const sidebarItems = [
+interface SidebarItem {
+  icon: React.ComponentType<{ size?: number; className?: string }>;
+  label: string;
+  id: string;
+  roles?: Role[];
+}
+
+const sidebarItems: SidebarItem[] = [
   { icon: LayoutDashboard, label: "Dashboard", id: "dashboard" },
   { icon: Building2, label: "Properties", id: "properties" },
   { icon: FolderTree, label: "Projects", id: "projects" },
   { icon: Users, label: "Customers", id: "customers" },
   { icon: FileText, label: "Leads", id: "leads" },
-  { icon: Shield, label: "Users", id: "users" },
-  { icon: Settings, label: "Settings", id: "settings" },
+  { icon: FileText, label: "Inquiries", id: "inquiries" },
+  { icon: Shield, label: "Users", id: "users", roles: ["admin", "manager"] },
+  { icon: Settings, label: "Settings", id: "settings", roles: ["admin", "manager"] },
   { icon: HelpCircle, label: "Help", id: "help" },
 ];
 
 export function DashboardLayout({ children, activeView, setActiveView, onFabClick }: { children: React.ReactNode, activeView: string, setActiveView: (v: string) => void, onFabClick: () => void }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
-  const { user, logout } = useAuth();
+  const { user, logout, hasRole } = useAuth();
   const router = useRouter();
+
+  const visibleItems = sidebarItems.filter(
+    (item) => !item.roles || hasRole(...item.roles)
+  );
 
   const handleLogout = () => {
     logout();
@@ -65,7 +78,7 @@ export function DashboardLayout({ children, activeView, setActiveView, onFabClic
         </div>
 
         <nav className="flex-1 overflow-y-auto py-6 px-3 space-y-1">
-          {sidebarItems.map((item) => (
+          {visibleItems.map((item) => (
             <button
               key={item.id}
               onClick={() => {

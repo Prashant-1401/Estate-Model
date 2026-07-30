@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, MapPin, Bed, Bath, Square, Building, IndianRupee, Save, ImagePlus, Trash2 } from "lucide-react";
 import type { Property } from "@/lib/types";
@@ -14,24 +14,8 @@ interface EditPropertyCardProps {
 
 export function EditPropertyCard({ isOpen, onClose, onSubmit, property }: EditPropertyCardProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [formData, setFormData] = useState({ title: "", location: "", price: "", bedrooms: "", bathrooms: "", area: "", type: "", status: "Available" as Property["status"] });
-  const [photos, setPhotos] = useState<string[]>([]);
-
-  useEffect(() => {
-    if (property) {
-      setFormData({
-        title: property.title,
-        location: property.location,
-        price: property.price,
-        bedrooms: property.bedrooms.toString(),
-        bathrooms: property.bathrooms.toString(),
-        area: property.area,
-        type: property.type,
-        status: property.status,
-      });
-      setPhotos(property.images);
-    }
-  }, [property]);
+  const [formData, setFormData] = useState({ title: property?.title || "", location: property?.location || "", price: property?.price || "", bedrooms: property?.bedrooms?.toString() || "", bathrooms: property?.bathrooms?.toString() || "", area: property?.area || "", type: property?.type || "", status: property?.status || "Available" });
+  const [photos, setPhotos] = useState<string[]>(property?.images || []);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
