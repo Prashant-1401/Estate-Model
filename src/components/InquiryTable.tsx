@@ -1,8 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import { motion } from "framer-motion";
-import { Search, Filter, Mail, Phone, MessageSquare, MoreHorizontal, MapPin, Building, IndianRupee } from "lucide-react";
+import { Search, Filter, X, Mail, Phone, MessageSquare, MoreHorizontal, MapPin, Building, IndianRupee, Pencil, Trash2 } from "lucide-react";
 import type { Inquiry } from "@/lib/types";
+import { Pagination } from "@/components/Pagination";
 
 const statusColors: Record<string, string> = {
   "New": "bg-blue-50 text-[#2563EB] border border-blue-100",
@@ -10,11 +12,42 @@ const statusColors: Record<string, string> = {
   "Closed": "bg-slate-50 text-[#64748B] border border-slate-100",
 };
 
+const statusOptions = ["New", "Contacted", "Closed"] as const;
+
 interface InquiryTableProps {
   inquiries: Inquiry[];
+  onEdit?: (inquiry: Inquiry) => void;
+  onDelete?: (id: string) => void;
 }
 
-export function InquiryTable({ inquiries }: InquiryTableProps) {
+export function InquiryTable({ inquiries, onEdit, onDelete }: InquiryTableProps) {
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("");
+  const [showStatusDropdown, setShowStatusDropdown] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+
+  const filtered = inquiries.filter((inq) => {
+    const q = search.toLowerCase();
+    const matchesSearch =
+      !search ||
+      inq.id.toLowerCase().includes(q) ||
+      inq.name.toLowerCase().includes(q) ||
+      inq.phone.toLowerCase().includes(q) ||
+      inq.email.toLowerCase().includes(q);
+    const matchesStatus = !statusFilter || inq.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+  const paginated = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+  const handleFilterSelect = (val: string) => {
+    setStatusFilter(val === statusFilter ? "" : val);
+    setShowStatusDropdown(false);
+    setCurrentPage(1);
+  };
+
   return (
     <div className="space-y-4 lg:space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -27,10 +60,52 @@ export function InquiryTable({ inquiries }: InquiryTableProps) {
       <div className="bg-white p-4 rounded-2xl border border-[#E2E8F0] shadow-sm space-y-3">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#64748B]" size={16} />
-          <input type="text" placeholder="Search inquiries..." className="w-full pl-9 pr-4 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB]" />
+          <input
+            type="text"
+            placeholder="Search by name, phone, email, or ID..."
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
+            className="w-full pl-9 pr-4 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB]"
+          />
         </div>
         <div className="flex flex-wrap gap-2">
-          {["Status", "Property Type", "Area", "Budget"].map((filter) => (
+          <div className="relative">
+            <button
+              onClick={() => setShowStatusDropdown(!showStatusDropdown)}
+              className="flex items-center gap-2 px-3 py-2 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-sm text-[#64748B] hover:border-[#2563EB] hover:text-[#2563EB] transition-colors"
+            >
+              <Filter size={14} /> Status{statusFilter ? `: ${statusFilter}` : ""}
+            </button>
+            {showStatusDropdown && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setShowStatusDropdown(false)} />
+                <div className="absolute top-full left-0 mt-1 z-20 bg-white border border-[#E2E8F0] rounded-xl shadow-lg py-1 min-w-[140px]">
+                  {statusOptions.map((opt) => (
+                    <button
+                      key={opt}
+                      onClick={() => handleFilterSelect(opt)}
+                      className={`w-full text-left px-3 py-2 text-sm transition-colors ${
+                        statusFilter === opt
+                          ? "text-[#2563EB] bg-blue-50"
+                          : "text-[#0F172A] hover:bg-[#F8FAFC]"
+                      }`}
+                    >
+                      {opt}
+                    </button>
+                  ))}
+                  {statusFilter && (
+                    <button
+                      onClick={() => handleFilterSelect("")}
+                      className="w-full text-left px-3 py-2 text-sm text-[#EF4444] hover:bg-red-50 transition-colors flex items-center gap-2"
+                    >
+                      <X size={14} /> Clear
+                    </button>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+          {["Property Type", "Area", "Budget"].map((filter) => (
             <button key={filter} className="flex items-center gap-2 px-3 py-2 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-sm text-[#64748B] hover:border-[#2563EB] hover:text-[#2563EB] transition-colors">
               <Filter size={14} /> {filter}
             </button>
@@ -49,14 +124,14 @@ export function InquiryTable({ inquiries }: InquiryTableProps) {
               </tr>
             </thead>
             <tbody className="divide-y divide-[#E2E8F0]">
-              {inquiries.length === 0 ? (
+              {paginated.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="px-6 py-16 text-center text-[#64748B] text-sm">
                     No inquiries yet
                   </td>
                 </tr>
               ) : (
-                inquiries.map((inq, i) => (
+                paginated.map((inq, i) => (
                   <motion.tr
                     key={inq.id}
                     initial={{ opacity: 0, y: 10 }}
@@ -117,9 +192,16 @@ export function InquiryTable({ inquiries }: InquiryTableProps) {
                         <button className="p-2 text-[#2563EB] hover:bg-blue-50 rounded-lg transition-colors" title="Call">
                           <Phone size={16} />
                         </button>
-                        <button className="p-2 text-[#64748B] hover:bg-slate-100 rounded-lg transition-colors">
-                          <MoreHorizontal size={16} />
-                        </button>
+                        {onEdit && (
+                          <button onClick={() => onEdit(inq)} className="p-2 text-[#F59E0B] hover:bg-amber-50 rounded-lg transition-colors" title="Edit">
+                            <Pencil size={16} />
+                          </button>
+                        )}
+                        {onDelete && (
+                          <button onClick={() => onDelete(inq.id)} className="p-2 text-[#EF4444] hover:bg-red-50 rounded-lg transition-colors" title="Delete">
+                            <Trash2 size={16} />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </motion.tr>
@@ -129,23 +211,25 @@ export function InquiryTable({ inquiries }: InquiryTableProps) {
           </table>
         </div>
 
-        {inquiries.length > 0 && (
-          <div className="px-6 py-4 border-t border-[#E2E8F0] flex items-center justify-between">
-            <p className="text-sm text-[#64748B]">
-              Showing <span className="font-medium text-[#0F172A]">1-{inquiries.length}</span> of{" "}
-              <span className="font-medium text-[#0F172A]">{inquiries.length}</span> inquiries
-            </p>
-          </div>
+        {filtered.length > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={filtered.length}
+            itemsPerPage={itemsPerPage}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={(size) => { setItemsPerPage(size); setCurrentPage(1); }}
+          />
         )}
       </div>
 
       <div className="lg:hidden space-y-3">
-        {inquiries.length === 0 ? (
+        {paginated.length === 0 ? (
           <div className="bg-white p-8 rounded-2xl border border-[#E2E8F0] text-center">
             <p className="text-[#64748B] text-sm">No inquiries yet</p>
           </div>
         ) : (
-          inquiries.map((inq, i) => (
+          paginated.map((inq, i) => (
             <motion.div
               key={inq.id}
               initial={{ opacity: 0, y: 10 }}
@@ -199,12 +283,34 @@ export function InquiryTable({ inquiries }: InquiryTableProps) {
                 <a href={`tel:${inq.phone}`} className="flex-1 flex items-center justify-center gap-2 py-2 bg-[#2563EB] text-white rounded-xl text-sm font-medium">
                   <Phone size={16} /> Call
                 </a>
-                <button className="p-2 border border-[#E2E8F0] rounded-xl text-[#64748B]">
-                  <MoreHorizontal size={18} />
-                </button>
+                {onEdit && (
+                  <button onClick={() => onEdit(inq)} className="p-2 border border-[#E2E8F0] rounded-xl text-[#F59E0B]">
+                    <Pencil size={18} />
+                  </button>
+                )}
+                {onDelete && (
+                  <button onClick={() => onDelete(inq.id)} className="p-2 border border-[#E2E8F0] rounded-xl text-[#EF4444]">
+                    <Trash2 size={18} />
+                  </button>
+                )}
+                {!onEdit && !onDelete && (
+                  <button className="p-2 border border-[#E2E8F0] rounded-xl text-[#64748B]">
+                    <MoreHorizontal size={18} />
+                  </button>
+                )}
               </div>
             </motion.div>
           ))
+        )}
+        {filtered.length > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={filtered.length}
+            itemsPerPage={itemsPerPage}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={(size) => { setItemsPerPage(size); setCurrentPage(1); }}
+          />
         )}
       </div>
     </div>

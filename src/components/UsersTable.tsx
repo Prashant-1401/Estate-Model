@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { Search, Download, MoreHorizontal, Shield, UserCheck, UserX } from "lucide-react";
+import { Pagination } from "@/components/Pagination";
 
 interface UserData {
   id: string;
@@ -17,6 +18,8 @@ interface UserData {
 interface UsersTableProps {
   users: UserData[];
   onAddUser: () => void;
+  onUpdateRole?: (id: string, role: string) => void;
+  onToggleStatus?: (id: string, currentStatus: string) => void;
 }
 
 const roleColors: Record<string, string> = {
@@ -26,8 +29,31 @@ const roleColors: Record<string, string> = {
   Viewer: "bg-slate-50 text-[#64748B] border border-slate-100",
 };
 
-export function UsersTable({ users, onAddUser }: UsersTableProps) {
+export function UsersTable({ users, onAddUser, onUpdateRole, onToggleStatus }: UsersTableProps) {
   const [openMenu, setOpenMenu] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("All");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+
+  const filteredUsers = users.filter((user) => {
+    const q = search.toLowerCase();
+    const matchesSearch =
+      !q ||
+      user.name.toLowerCase().includes(q) ||
+      user.email.toLowerCase().includes(q) ||
+      user.phone.toLowerCase().includes(q) ||
+      user.role.toLowerCase().includes(q);
+    const matchesStatus = statusFilter === "All" || user.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
+  const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
+  const safePage = Math.min(currentPage, Math.max(1, totalPages));
+  const paginatedUsers = filteredUsers.slice(
+    (safePage - 1) * itemsPerPage,
+    safePage * itemsPerPage
+  );
 
   return (
     <div className="space-y-4 lg:space-y-6">
@@ -49,22 +75,36 @@ export function UsersTable({ users, onAddUser }: UsersTableProps) {
       <div className="bg-white p-4 rounded-2xl border border-[#E2E8F0] shadow-sm space-y-3">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#64748B]" size={16} />
-          <input type="text" placeholder="Search users..." 
-            className="w-full pl-9 pr-4 py-2 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition-all" />
+          <input
+            type="text"
+            placeholder="Search users..."
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setCurrentPage(1);
+            }}
+            className="w-full pl-9 pr-4 py-2 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition-all"
+          />
         </div>
         <div className="flex gap-2 overflow-x-auto pb-1">
           {["All", "Active", "Inactive"].map((filter) => (
-            <button key={filter}
+            <button
+              key={filter}
+              onClick={() => {
+                setStatusFilter(filter);
+                setCurrentPage(1);
+              }}
               className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                filter === "All" ? "bg-[#2563EB] text-white" : "bg-[#F8FAFC] text-[#64748B] hover:bg-[#E2E8F0]"
-              }`}>
+                statusFilter === filter ? "bg-[#2563EB] text-white" : "bg-[#F8FAFC] text-[#64748B] hover:bg-[#E2E8F0]"
+              }`}
+            >
               {filter}
             </button>
           ))}
         </div>
       </div>
 
-      {users.length === 0 ? (
+      {filteredUsers.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-center bg-white rounded-2xl border border-[#E2E8F0]">
           <div className="w-16 h-16 bg-[#F8FAFC] rounded-2xl flex items-center justify-center mb-4 border border-[#E2E8F0]">
             <Shield size={28} className="text-[#64748B]" />
@@ -84,7 +124,7 @@ export function UsersTable({ users, onAddUser }: UsersTableProps) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#E2E8F0]">
-                {users.map((user) => (
+                {paginatedUsers.map((user) => (
                   <motion.tr key={user.id}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
@@ -122,14 +162,27 @@ export function UsersTable({ users, onAddUser }: UsersTableProps) {
                       {openMenu === user.id && (
                         <>
                           <div className="fixed inset-0 z-10" onClick={() => setOpenMenu(null)} />
-                          <div className="absolute right-0 top-full mt-1 w-36 bg-white rounded-xl shadow-xl border border-[#E2E8F0] py-2 z-20">
-                            <button className="w-full flex items-center gap-2 px-4 py-2 text-sm text-[#0F172A] hover:bg-[#F8FAFC] transition-colors">
+                          <div className="absolute right-0 top-full mt-1 w-40 bg-white rounded-xl shadow-xl border border-[#E2E8F0] py-2 z-20">
+                            <button onClick={() => { onUpdateRole?.(user.id, "admin"); setOpenMenu(null); }}
+                              className="w-full flex items-center gap-2 px-4 py-2 text-sm text-[#0F172A] hover:bg-[#F8FAFC] transition-colors">
                               <Shield size={14} />
-                              Edit Role
+                              Make Admin
                             </button>
-                            <button className="w-full flex items-center gap-2 px-4 py-2 text-sm text-[#EF4444] hover:bg-red-50 transition-colors">
+                            <button onClick={() => { onUpdateRole?.(user.id, "manager"); setOpenMenu(null); }}
+                              className="w-full flex items-center gap-2 px-4 py-2 text-sm text-[#0F172A] hover:bg-[#F8FAFC] transition-colors">
+                              <Shield size={14} />
+                              Make Manager
+                            </button>
+                            <button onClick={() => { onUpdateRole?.(user.id, "agent"); setOpenMenu(null); }}
+                              className="w-full flex items-center gap-2 px-4 py-2 text-sm text-[#0F172A] hover:bg-[#F8FAFC] transition-colors">
+                              <Shield size={14} />
+                              Make Agent
+                            </button>
+                            <div className="border-t border-[#E2E8F0] my-1" />
+                            <button onClick={() => { onToggleStatus?.(user.id, user.status); setOpenMenu(null); }}
+                              className="w-full flex items-center gap-2 px-4 py-2 text-sm text-[#EF4444] hover:bg-red-50 transition-colors">
                               <UserX size={14} />
-                              Deactivate
+                              {user.status === "Active" ? "Deactivate" : "Activate"}
                             </button>
                           </div>
                         </>
@@ -140,6 +193,14 @@ export function UsersTable({ users, onAddUser }: UsersTableProps) {
               </tbody>
             </table>
           </div>
+          <Pagination
+            currentPage={safePage}
+            totalPages={totalPages}
+            totalItems={filteredUsers.length}
+            itemsPerPage={itemsPerPage}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={(size) => { setItemsPerPage(size); setCurrentPage(1); }}
+          />
         </div>
       )}
     </div>

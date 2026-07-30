@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, User, Phone, Mail, IndianRupee, MapPin, Building, Tag, Save } from "lucide-react";
+import { useToast } from "@/lib/toast-context";
 
 interface AddLeadCardProps {
   isOpen: boolean;
@@ -11,6 +12,8 @@ interface AddLeadCardProps {
 }
 
 export function AddLeadCard({ isOpen, onClose, onSubmit }: AddLeadCardProps) {
+  const { showToast } = useToast();
+
   const [formData, setFormData] = useState({
     name: "",
     phone: "",
@@ -22,8 +25,45 @@ export function AddLeadCard({ isOpen, onClose, onSubmit }: AddLeadCardProps) {
     notes: "",
   });
 
+  const [errors, setErrors] = useState<{ name?: string; phone?: string; budget?: string }>({});
+
+  const validate = () => {
+    const newErrors: { name?: string; phone?: string; budget?: string } = {};
+
+    if (!formData.name.trim()) {
+      newErrors.name = "Name is required";
+    } else if (formData.name.trim().length < 2) {
+      newErrors.name = "Name must be at least 2 characters";
+    }
+
+    if (!formData.phone.trim()) {
+      newErrors.phone = "Phone number is required";
+    } else {
+      const digitsOnly = formData.phone.replace(/[\s\-\+]/g, "");
+      if (!/^\d{7,}$/.test(digitsOnly)) {
+        newErrors.phone = "Phone must have at least 7 digits";
+      }
+    }
+
+    if (!formData.budget) {
+      newErrors.budget = "Budget is required";
+    }
+
+    return newErrors;
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const validationErrors = validate();
+    setErrors(validationErrors);
+
+    const errorKeys = Object.keys(validationErrors) as (keyof typeof validationErrors)[];
+    if (errorKeys.length > 0) {
+      const firstError = validationErrors[errorKeys[0]];
+      if (firstError) showToast(firstError, "error");
+      return;
+    }
+
     onSubmit(formData);
     onClose();
     setFormData({
@@ -36,6 +76,7 @@ export function AddLeadCard({ isOpen, onClose, onSubmit }: AddLeadCardProps) {
       source: "",
       notes: "",
     });
+    setErrors({});
   };
 
   if (!isOpen) return null;
@@ -82,11 +123,15 @@ export function AddLeadCard({ isOpen, onClose, onSubmit }: AddLeadCardProps) {
                     type="text"
                     required
                     value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    onChange={(e) => {
+                      setFormData({ ...formData, name: e.target.value });
+                      if (errors.name) setErrors({ ...errors, name: undefined });
+                    }}
                     className="w-full pl-10 pr-4 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition-all"
                     placeholder="John Doe"
                   />
                 </div>
+                {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name}</p>}
               </div>
 
               {/* Phone */}
@@ -98,11 +143,15 @@ export function AddLeadCard({ isOpen, onClose, onSubmit }: AddLeadCardProps) {
                     type="tel"
                     required
                     value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    onChange={(e) => {
+                      setFormData({ ...formData, phone: e.target.value });
+                      if (errors.phone) setErrors({ ...errors, phone: undefined });
+                    }}
                     className="w-full pl-10 pr-4 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition-all"
                     placeholder="+971 50 123 4567"
                   />
                 </div>
+                {errors.phone && <p className="text-xs text-red-500 mt-1">{errors.phone}</p>}
               </div>
 
               {/* Email */}
@@ -128,7 +177,10 @@ export function AddLeadCard({ isOpen, onClose, onSubmit }: AddLeadCardProps) {
                   <select
                     required
                     value={formData.budget}
-                    onChange={(e) => setFormData({ ...formData, budget: e.target.value })}
+                    onChange={(e) => {
+                      setFormData({ ...formData, budget: e.target.value });
+                      if (errors.budget) setErrors({ ...errors, budget: undefined });
+                    }}
                     className="w-full pl-10 pr-4 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition-all appearance-none"
                   >
                     <option value="">Select Budget</option>
@@ -139,6 +191,7 @@ export function AddLeadCard({ isOpen, onClose, onSubmit }: AddLeadCardProps) {
                     <option value="2cr+">₹2Cr+</option>
                   </select>
                 </div>
+                {errors.budget && <p className="text-xs text-red-500 mt-1">{errors.budget}</p>}
               </div>
 
               {/* Preferred Area */}

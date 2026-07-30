@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { api } from "@/lib/api";
+import { useToast } from "@/lib/toast-context";
 import { DashboardLayout } from "@/components/Layout";
 import { DashboardView } from "@/components/DashboardView";
 import { LeadsTable } from "@/components/LeadsTable";
@@ -22,11 +23,14 @@ import { EditProjectCard } from "@/components/EditProjectCard";
 import { Plus, Building2 as ProjectIcon, Edit2, Trash2 } from "lucide-react";
 import type { Property, Project, Lead, UserData } from "@/lib/types";
 import { InquiryTable } from "@/components/InquiryTable";
+import { Pagination } from "@/components/Pagination";
 import type { Inquiry } from "@/lib/types";
 
 function DashboardContent() {
   const { hasRole } = useAuth();
+  const { showToast } = useToast();
   const [activeView, setActiveView] = useState("dashboard");
+  const [loading, setLoading] = useState(true);
   const [isAddLeadOpen, setIsAddLeadOpen] = useState(false);
   const [isAddPropertyOpen, setIsAddPropertyOpen] = useState(false);
   const [isAddProjectOpen, setIsAddProjectOpen] = useState(false);
@@ -41,29 +45,38 @@ function DashboardContent() {
   const [properties, setProperties] = useState<Property[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
+  const [stats, setStats] = useState({ total_leads: 0, today_leads: 0, hot_leads: 0, total_properties: 0, total_projects: 0, total_inquiries: 0, total_users: 0, revenue_mtd: "₹0" });
+  const [selectedCustomer, setSelectedCustomer] = useState<Lead | null>(null);
+  const [propPage, setPropPage] = useState(1);
+  const [propPerPage, setPropPerPage] = useState(9);
+  const [projPage, setProjPage] = useState(1);
+  const [projPerPage, setProjPerPage] = useState(10);
 
   async function reload() {
-    const [l, p, pr, u, i] = await Promise.all([
+    const [l, p, pr, u, i, s] = await Promise.all([
       api.get<Lead[]>("/api/leads").catch(() => [] as Lead[]),
       api.get<Property[]>("/api/properties").catch(() => [] as Property[]),
       api.get<Project[]>("/api/projects").catch(() => [] as Project[]),
       api.get<UserData[]>("/api/users").catch(() => [] as UserData[]),
       api.get<Inquiry[]>("/api/inquiries").catch(() => [] as Inquiry[]),
+      api.get<typeof stats>("/api/dashboard/stats").catch(() => ({ total_leads: 0, today_leads: 0, hot_leads: 0, total_properties: 0, total_projects: 0, total_inquiries: 0, total_users: 0, revenue_mtd: "₹0" })),
     ]);
     setLeads(l);
     setProperties(p);
     setProjects(pr);
     setUsers(u);
     setInquiries(i);
+    setStats(s);
   }
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       await reload();
-      if (cancelled) return;
+      if (!cancelled) setLoading(false);
     })();
     return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleAddLead = async (leadData: Record<string, string>) => {
@@ -80,21 +93,30 @@ function DashboardContent() {
         date: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
       });
       await reload();
-    } catch {}
+      showToast("Lead created successfully", "success");
+    } catch (e: unknown) {
+      showToast(e instanceof Error ? e.message : "Failed to create lead", "error");
+    }
   };
 
   const handleAddProperty = async (property: Property) => {
     try {
       await api.post("/api/properties", property);
       await reload();
-    } catch {}
+      showToast("Property added successfully", "success");
+    } catch (e: unknown) {
+      showToast(e instanceof Error ? e.message : "Failed to add property", "error");
+    }
   };
 
   const handleAddProject = async (project: Project) => {
     try {
       await api.post("/api/projects", project);
       await reload();
-    } catch {}
+      showToast("Project created successfully", "success");
+    } catch (e: unknown) {
+      showToast(e instanceof Error ? e.message : "Failed to create project", "error");
+    }
   };
 
   const handleAddUser = async (data: Record<string, string>) => {
@@ -107,7 +129,10 @@ function DashboardContent() {
         password: data.password,
       });
       await reload();
-    } catch {}
+      showToast("User added successfully", "success");
+    } catch (e: unknown) {
+      showToast(e instanceof Error ? e.message : "Failed to add user", "error");
+    }
   };
 
   const handleEditLead = async (id: string, data: Record<string, string>) => {
@@ -122,21 +147,40 @@ function DashboardContent() {
         status: data.status,
       });
       await reload();
-    } catch {}
+      showToast("Lead updated successfully", "success");
+    } catch (e: unknown) {
+      showToast(e instanceof Error ? e.message : "Failed to update lead", "error");
+    }
   };
 
   const handleEditProperty = async (id: string, property: Property) => {
     try {
       await api.put(`/api/properties/${id}`, property);
       await reload();
-    } catch {}
+      showToast("Property updated successfully", "success");
+    } catch (e: unknown) {
+      showToast(e instanceof Error ? e.message : "Failed to update property", "error");
+    }
   };
 
   const handleEditProject = async (id: string, project: Project) => {
     try {
       await api.put(`/api/projects/${id}`, project);
       await reload();
-    } catch {}
+      showToast("Project updated successfully", "success");
+    } catch (e: unknown) {
+      showToast(e instanceof Error ? e.message : "Failed to update project", "error");
+    }
+  };
+
+  const handleDeleteInquiry = async (id: string) => {
+    try {
+      await api.delete(`/api/inquiries/${id}`);
+      await reload();
+      showToast("Inquiry deleted", "success");
+    } catch (e: unknown) {
+      showToast(e instanceof Error ? e.message : "Failed to delete inquiry", "error");
+    }
   };
 
   const handleDelete = async (type: string, id: string) => {
@@ -145,9 +189,33 @@ function DashboardContent() {
       if (endpoint) {
         await api.delete(`/api/${endpoint}/${id}`);
         await reload();
+        showToast(`${type} deleted successfully`, "success");
       }
-    } catch {}
+    } catch (e: unknown) {
+      showToast(e instanceof Error ? e.message : `Failed to delete ${type}`, "error");
+    }
     setDeleteConfirm(null);
+  };
+
+  const handleUpdateUserRole = async (id: string, role: string) => {
+    try {
+      await api.put(`/api/users/${id}`, { role });
+      await reload();
+      showToast("User role updated", "success");
+    } catch (e: unknown) {
+      showToast(e instanceof Error ? e.message : "Failed to update role", "error");
+    }
+  };
+
+  const handleToggleUserStatus = async (id: string, currentStatus: string) => {
+    try {
+      const newStatus = currentStatus === "Active" ? "Inactive" : "Active";
+      await api.put(`/api/users/${id}`, { status: newStatus });
+      await reload();
+      showToast(`User ${newStatus.toLowerCase()}`, "success");
+    } catch (e: unknown) {
+      showToast(e instanceof Error ? e.message : "Failed to update user", "error");
+    }
   };
 
   const canManage = hasRole("admin", "manager");
@@ -155,7 +223,7 @@ function DashboardContent() {
   const renderView = () => {
     switch (activeView) {
       case "dashboard":
-        return <DashboardView onAddLead={() => setIsAddLeadOpen(true)} />;
+        return <DashboardView onAddLead={() => setIsAddLeadOpen(true)} stats={stats} />;
       case "leads":
         return (
           <LeadsTable
@@ -163,12 +231,22 @@ function DashboardContent() {
             onAddLead={() => setIsAddLeadOpen(true)}
             onEdit={canManage ? (lead) => setEditingLead(lead) : undefined}
             onDelete={canManage ? (id) => setDeleteConfirm({ type: "lead", id }) : undefined}
+            onViewCustomer={(lead) => { setSelectedCustomer(lead); setActiveView("customers"); }}
           />
         );
       case "inquiries":
-        return <InquiryTable inquiries={inquiries} />;
+        return (
+          <InquiryTable
+            inquiries={inquiries}
+            onDelete={canManage ? (id) => handleDeleteInquiry(id) : undefined}
+          />
+        );
       case "customers":
-        return <CustomerProfile />;
+        return selectedCustomer ? (
+          <CustomerProfile lead={selectedCustomer} onBack={() => setActiveView("leads")} />
+        ) : (
+          <CustomerProfile />
+        );
       case "users":
         if (!hasRole("admin")) {
           return (
@@ -177,7 +255,7 @@ function DashboardContent() {
             </div>
           );
         }
-        return <UsersTable users={users} onAddUser={() => setIsAddUserOpen(true)} />;
+        return <UsersTable users={users} onAddUser={() => setIsAddUserOpen(true)} onUpdateRole={handleUpdateUserRole} onToggleStatus={handleToggleUserStatus} />;
       case "properties":
         return (
           <div className="space-y-6">
@@ -205,33 +283,45 @@ function DashboardContent() {
                 <p className="text-[#64748B] mt-1 text-sm">Add your first property to get started.</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {properties.map((property) => (
-                  <PropertyCard
-                    key={property.id}
-                    id={property.id}
-                    title={property.title}
-                    location={property.location}
-                    price={property.price}
-                    bedrooms={property.bedrooms}
-                    bathrooms={property.bathrooms}
-                    area={property.area}
-                    type={property.type}
-                    status={property.status}
-                    images={property.images}
-                    featured={property.featured}
-                    onViewDetails={(id) => {
-                      const p = properties.find((pr) => pr.id === id);
-                      if (p) setSelectedProperty(p);
-                    }}
-                    onEdit={canManage ? (id) => {
-                      const p = properties.find((pr) => pr.id === id);
-                      if (p) setEditingProperty(p);
-                    } : undefined}
-                    onDelete={canManage ? (id) => setDeleteConfirm({ type: "property", id }) : undefined}
-                  />
-                ))}
-              </div>
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {properties.slice((propPage - 1) * propPerPage, propPage * propPerPage).map((property) => (
+                    <PropertyCard
+                      key={property.id}
+                      id={property.id}
+                      title={property.title}
+                      location={property.location}
+                      price={property.price}
+                      bedrooms={property.bedrooms}
+                      bathrooms={property.bathrooms}
+                      area={property.area}
+                      type={property.type}
+                      status={property.status}
+                      images={property.images}
+                      featured={property.featured}
+                      onViewDetails={(id) => {
+                        const p = properties.find((pr) => pr.id === id);
+                        if (p) setSelectedProperty(p);
+                      }}
+                      onEdit={canManage ? (id) => {
+                        const p = properties.find((pr) => pr.id === id);
+                        if (p) setEditingProperty(p);
+                      } : undefined}
+                      onDelete={canManage ? (id) => setDeleteConfirm({ type: "property", id }) : undefined}
+                    />
+                  ))}
+                </div>
+                <Pagination
+                  currentPage={Math.min(propPage, Math.ceil(properties.length / propPerPage))}
+                  totalPages={Math.ceil(properties.length / propPerPage)}
+                  totalItems={properties.length}
+                  itemsPerPage={propPerPage}
+                  onPageChange={(p) => setPropPage(p)}
+                  onPageSizeChange={(s) => { setPropPerPage(s); setPropPage(1); }}
+                  pageSizeOptions={[9, 18, 36]}
+                  showPageSizeSelector
+                />
+              </>
             )}
           </div>
         );
@@ -273,7 +363,7 @@ function DashboardContent() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[#E2E8F0]">
-                      {projects.map((project) => (
+                      {projects.slice((projPage - 1) * projPerPage, projPage * projPerPage).map((project) => (
                         <tr key={project.id} className="hover:bg-[#F8FAFC] transition-colors">
                           <td className="px-6 py-4">
                             <p className="text-sm font-medium text-[#0F172A]">{project.name}</p>
@@ -311,6 +401,15 @@ function DashboardContent() {
                     </tbody>
                   </table>
                 </div>
+                <Pagination
+                  currentPage={Math.min(projPage, Math.ceil(projects.length / projPerPage))}
+                  totalPages={Math.ceil(projects.length / projPerPage)}
+                  totalItems={projects.length}
+                  itemsPerPage={projPerPage}
+                  onPageChange={(p) => setProjPage(p)}
+                  onPageSizeChange={(s) => { setProjPerPage(s); setProjPage(1); }}
+                  showPageSizeSelector
+                />
               </div>
             )}
           </div>
@@ -336,9 +435,20 @@ function DashboardContent() {
           </div>
         );
       default:
-        return <DashboardView onAddLead={() => setIsAddLeadOpen(true)} />;
+        return <DashboardView onAddLead={() => setIsAddLeadOpen(true)} stats={stats} />;
     }
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-[#F8FAFC]">
+        <div className="text-center">
+          <div className="w-10 h-10 border-4 border-[#2563EB] border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-sm text-[#64748B] mt-4">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>

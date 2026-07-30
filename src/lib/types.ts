@@ -70,6 +70,17 @@ export interface Inquiry {
   date: string;
 }
 
+export interface DashboardStats {
+  total_leads: number;
+  today_leads: number;
+  hot_leads: number;
+  total_properties: number;
+  total_projects: number;
+  total_inquiries: number;
+  total_users: number;
+  revenue_mtd: string;
+}
+
 export interface AuthUser {
   id: string;
   name: string;

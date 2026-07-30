@@ -2,8 +2,9 @@
 
 import { motion } from "framer-motion";
 import { TrendingUp, TrendingDown, Users, CalendarCheck, IndianRupee } from "lucide-react";
+import type { DashboardStats } from "@/lib/types";
 
-export function DashboardView({ onAddLead }: { onAddLead: () => void }) {
+export function DashboardView({ stats, onAddLead }: { stats: DashboardStats; onAddLead: () => void }) {
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -25,10 +26,10 @@ export function DashboardView({ onAddLead }: { onAddLead: () => void }) {
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: "Total Leads", value: "0", change: "0%", trend: "up", icon: Users, color: "text-[#2563EB]", bg: "bg-blue-50" },
-          { label: "Today's Leads", value: "0", change: "0%", trend: "up", icon: Users, color: "text-[#22C55E]", bg: "bg-green-50" },
-          { label: "Hot Leads", value: "0", change: "0%", trend: "down", icon: TrendingUp, color: "text-[#F59E0B]", bg: "bg-amber-50" },
-          { label: "Revenue (MTD)", value: "₹0", change: "0%", trend: "up", icon: IndianRupee, color: "text-[#2563EB]", bg: "bg-blue-50" },
+          { label: "Total Leads", value: String(stats.total_leads), change: `${stats.total_leads > 0 ? "+" : ""}${stats.total_leads}`, trend: "up" as const, icon: Users, color: "text-[#2563EB]", bg: "bg-blue-50" },
+          { label: "Today's Leads", value: String(stats.today_leads), change: `${stats.today_leads > 0 ? "+" : ""}${stats.today_leads}`, trend: "up" as const, icon: Users, color: "text-[#22C55E]", bg: "bg-green-50" },
+          { label: "Hot Leads", value: String(stats.hot_leads), change: `${stats.hot_leads > 0 ? "+" : ""}${stats.hot_leads}`, trend: stats.hot_leads > 0 ? "up" as const : "down" as const, icon: TrendingUp, color: "text-[#F59E0B]", bg: "bg-amber-50" },
+          { label: "Revenue (MTD)", value: stats.revenue_mtd, change: `${stats.revenue_mtd !== "₹0" ? "+" : ""}${stats.revenue_mtd}`, trend: "up" as const, icon: IndianRupee, color: "text-[#2563EB]", bg: "bg-blue-50" },
         ].map((stat, i) => (
           <motion.div 
             key={stat.label}

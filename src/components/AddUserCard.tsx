@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, User, Mail, Phone, Shield, Key, Save } from "lucide-react";
+import { useToast } from "@/lib/toast-context";
 
 interface AddUserCardProps {
   isOpen: boolean;
@@ -12,7 +13,10 @@ interface AddUserCardProps {
 
 const roles = ["admin", "manager", "agent"];
 
+const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 export function AddUserCard({ isOpen, onClose, onSubmit }: AddUserCardProps) {
+  const { showToast } = useToast();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -20,9 +24,41 @@ export function AddUserCard({ isOpen, onClose, onSubmit }: AddUserCardProps) {
     password: "",
     role: "agent",
   });
+  const [errors, setErrors] = useState<{ name?: string; email?: string; phone?: string; password?: string }>({});
+
+  const validate = () => {
+    const newErrors: typeof errors = {};
+    if (!formData.name.trim() || formData.name.trim().length < 2) {
+      newErrors.name = "Name must be at least 2 characters";
+    }
+    if (!formData.email.trim() || !emailPattern.test(formData.email.trim())) {
+      newErrors.email = "Please enter a valid email address";
+    }
+    if (!formData.phone.trim() || formData.phone.replace(/\D/g, "").length < 7) {
+      newErrors.phone = "Phone must have at least 7 digits";
+    }
+    if (!formData.password || formData.password.length < 6) {
+      newErrors.password = "Password must be at least 6 characters";
+    }
+    return newErrors;
+  };
+
+  const handleChange = (field: string, value: string) => {
+    setFormData({ ...formData, [field]: value });
+    if (errors[field as keyof typeof errors]) {
+      setErrors({ ...errors, [field]: undefined });
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const validationErrors = validate();
+    setErrors(validationErrors);
+    const firstError = Object.values(validationErrors).find(Boolean);
+    if (firstError) {
+      showToast(firstError, "error");
+      return;
+    }
     onSubmit({
       name: formData.name,
       email: formData.email,
@@ -67,10 +103,11 @@ export function AddUserCard({ isOpen, onClose, onSubmit }: AddUserCardProps) {
               <label className="text-sm font-medium text-[#0F172A]">Full Name *</label>
               <div className="relative">
                 <User size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#64748B]" />
-                <input type="text" required value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                <input type="text" required value={formData.name} onChange={(e) => handleChange("name", e.target.value)}
                   className="w-full pl-10 pr-4 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition-all"
                   placeholder="John Doe" />
               </div>
+              {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name}</p>}
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -78,19 +115,21 @@ export function AddUserCard({ isOpen, onClose, onSubmit }: AddUserCardProps) {
                 <label className="text-sm font-medium text-[#0F172A]">Email *</label>
                 <div className="relative">
                   <Mail size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#64748B]" />
-                  <input type="email" required value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  <input type="email" required value={formData.email} onChange={(e) => handleChange("email", e.target.value)}
                     className="w-full pl-10 pr-4 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition-all"
                     placeholder="john@example.com" />
                 </div>
+                {errors.email && <p className="text-xs text-red-500 mt-1">{errors.email}</p>}
               </div>
               <div className="space-y-1.5">
                 <label className="text-sm font-medium text-[#0F172A]">Phone</label>
                 <div className="relative">
                   <Phone size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#64748B]" />
-                  <input type="tel" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  <input type="tel" value={formData.phone} onChange={(e) => handleChange("phone", e.target.value)}
                     className="w-full pl-10 pr-4 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition-all"
                     placeholder="+1 (555) 000-0000" />
                 </div>
+                {errors.phone && <p className="text-xs text-red-500 mt-1">{errors.phone}</p>}
               </div>
             </div>
 
@@ -99,10 +138,11 @@ export function AddUserCard({ isOpen, onClose, onSubmit }: AddUserCardProps) {
                 <label className="text-sm font-medium text-[#0F172A]">Password *</label>
                 <div className="relative">
                   <Key size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#64748B]" />
-                  <input type="password" required value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  <input type="password" required value={formData.password} onChange={(e) => handleChange("password", e.target.value)}
                     className="w-full pl-10 pr-4 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition-all"
                     placeholder="Min 6 characters" />
                 </div>
+                {errors.password && <p className="text-xs text-red-500 mt-1">{errors.password}</p>}
               </div>
               <div className="space-y-1.5">
                 <label className="text-sm font-medium text-[#0F172A]">Role *</label>

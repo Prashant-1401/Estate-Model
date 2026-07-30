@@ -1,8 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import { motion } from "framer-motion";
-import { Search, Filter, Download, MoreHorizontal, MessageCircle, Phone, Edit2, Trash2 } from "lucide-react";
+import { Search, Filter, Download, MoreHorizontal, MessageCircle, Phone, Edit2, Trash2, ChevronDown } from "lucide-react";
 import type { Lead } from "@/lib/types";
+import { Pagination } from "@/components/Pagination";
 
 const statusColors: Record<string, string> = {
   "Hot": "bg-red-50 text-[#EF4444] border border-red-100",
@@ -11,14 +13,37 @@ const statusColors: Record<string, string> = {
   "Cold": "bg-slate-50 text-[#64748B] border border-slate-100",
 };
 
+const statuses = ["Hot", "Warm", "New", "Cold"];
+
 interface LeadsTableProps {
   leads: Lead[];
   onAddLead: () => void;
   onEdit?: (lead: Lead) => void;
   onDelete?: (id: string) => void;
+  onViewCustomer?: (lead: Lead) => void;
 }
 
-export function LeadsTable({ leads, onAddLead, onEdit, onDelete }: LeadsTableProps) {
+export function LeadsTable({ leads, onAddLead, onEdit, onDelete, onViewCustomer }: LeadsTableProps) {
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [statusOpen, setStatusOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+
+  const filtered = leads.filter((lead) => {
+    const matchesSearch = !search ||
+      lead.name.toLowerCase().includes(search.toLowerCase()) ||
+      lead.phone.includes(search) ||
+      lead.id.toLowerCase().includes(search.toLowerCase());
+    const matchesStatus = !statusFilter || lead.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+  const effectivePage = Math.min(currentPage, Math.max(1, totalPages));
+  const startIndex = (effectivePage - 1) * itemsPerPage;
+  const paginatedLeads = filtered.slice(startIndex, startIndex + itemsPerPage);
+
   return (
     <div className="space-y-4 lg:space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -36,14 +61,47 @@ export function LeadsTable({ leads, onAddLead, onEdit, onDelete }: LeadsTablePro
         </div>
       </div>
 
-      {/* Filters */}
       <div className="bg-white p-4 rounded-2xl border border-[#E2E8F0] shadow-sm space-y-3">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#64748B]" size={16} />
-          <input type="text" placeholder="Search by name, phone, or ID..." className="w-full pl-9 pr-4 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB]" />
+          <input
+            type="text"
+            placeholder="Search by name, phone, or ID..."
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
+            className="w-full pl-9 pr-4 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB]"
+          />
         </div>
         <div className="flex flex-wrap gap-2">
-          {["Status", "Area", "Budget", "Assigned To"].map((filter) => (
+          <div className="relative">
+            <button
+              onClick={() => setStatusOpen(!statusOpen)}
+              className="flex items-center gap-2 px-3 py-2 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-sm text-[#64748B] hover:border-[#2563EB] hover:text-[#2563EB] transition-colors"
+            >
+              <Filter size={14} /> {statusFilter || "Status"}
+              <ChevronDown size={14} />
+            </button>
+            {statusOpen && (
+              <div className="absolute top-full left-0 mt-1 w-36 bg-white border border-[#E2E8F0] rounded-xl shadow-lg z-10 py-1">
+                <button
+                  onClick={() => { setStatusFilter(""); setStatusOpen(false); setCurrentPage(1); }}
+                  className={`w-full text-left px-3 py-2 text-sm ${!statusFilter ? "text-[#2563EB] font-medium" : "text-[#0F172A]"} hover:bg-[#F8FAFC]`}
+                >
+                  All Statuses
+                </button>
+                {statuses.map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => { setStatusFilter(s); setStatusOpen(false); setCurrentPage(1); }}
+                    className={`w-full text-left px-3 py-2 text-sm ${statusFilter === s ? "text-[#2563EB] font-medium" : "text-[#0F172A]"} hover:bg-[#F8FAFC]`}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          {["Area", "Budget", "Assigned To"].map((filter) => (
             <button key={filter} className="flex items-center gap-2 px-3 py-2 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-sm text-[#64748B] hover:border-[#2563EB] hover:text-[#2563EB] transition-colors">
               <Filter size={14} /> {filter}
             </button>
@@ -51,7 +109,6 @@ export function LeadsTable({ leads, onAddLead, onEdit, onDelete }: LeadsTablePro
         </div>
       </div>
 
-      {/* Table - Desktop */}
       <div className="hidden lg:block bg-white rounded-2xl border border-[#E2E8F0] shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
@@ -63,13 +120,14 @@ export function LeadsTable({ leads, onAddLead, onEdit, onDelete }: LeadsTablePro
               </tr>
             </thead>
             <tbody className="divide-y divide-[#E2E8F0]">
-              {leads.map((lead, i) => (
-                <motion.tr 
+              {paginatedLeads.map((lead, i) => (
+                <motion.tr
                   key={lead.id}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.05 }}
-                  className="group hover:bg-[#F8FAFC] transition-colors"
+                  className={`group hover:bg-[#F8FAFC] transition-colors ${onViewCustomer ? "cursor-pointer" : ""}`}
+                  onClick={() => onViewCustomer?.(lead)}
                 >
                   <td className="px-6 py-4 text-sm font-medium text-[#2563EB]">{lead.id}</td>
                   <td className="px-6 py-4">
@@ -93,8 +151,8 @@ export function LeadsTable({ leads, onAddLead, onEdit, onDelete }: LeadsTablePro
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button className="p-2 text-[#22C55E] hover:bg-green-50 rounded-lg transition-colors" title="WhatsApp"><MessageCircle size={16} /></button>
                       <button className="p-2 text-[#2563EB] hover:bg-blue-50 rounded-lg transition-colors" title="Call"><Phone size={16} /></button>
-                      {onEdit && <button onClick={() => onEdit(lead)} className="p-2 text-[#2563EB] hover:bg-blue-50 rounded-lg transition-colors" title="Edit"><Edit2 size={16} /></button>}
-                      {onDelete && <button onClick={() => onDelete(lead.id)} className="p-2 text-[#EF4444] hover:bg-red-50 rounded-lg transition-colors" title="Delete"><Trash2 size={16} /></button>}
+                      {onEdit && <button onClick={(e) => { e.stopPropagation(); onEdit(lead); }} className="p-2 text-[#2563EB] hover:bg-blue-50 rounded-lg transition-colors" title="Edit"><Edit2 size={16} /></button>}
+                      {onDelete && <button onClick={(e) => { e.stopPropagation(); onDelete(lead.id); }} className="p-2 text-[#EF4444] hover:bg-red-50 rounded-lg transition-colors" title="Delete"><Trash2 size={16} /></button>}
                     </div>
                   </td>
                 </motion.tr>
@@ -102,20 +160,19 @@ export function LeadsTable({ leads, onAddLead, onEdit, onDelete }: LeadsTablePro
             </tbody>
           </table>
         </div>
-        
-        {/* Pagination */}
-        <div className="px-6 py-4 border-t border-[#E2E8F0] flex items-center justify-between">
-          <p className="text-sm text-[#64748B]">Showing <span className="font-medium text-[#0F172A]">1-3</span> of <span className="font-medium text-[#0F172A]">1,284</span> leads</p>
-          <div className="flex gap-2">
-            <button className="px-3 py-1.5 text-sm border border-[#E2E8F0] rounded-lg hover:bg-[#F8FAFC] disabled:opacity-50" disabled>Previous</button>
-            <button className="px-3 py-1.5 text-sm border border-[#E2E8F0] rounded-lg hover:bg-[#F8FAFC]">Next</button>
-          </div>
-        </div>
+
+        <Pagination
+          currentPage={effectivePage}
+          totalPages={totalPages}
+          totalItems={filtered.length}
+          itemsPerPage={itemsPerPage}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={(size) => { setItemsPerPage(size); setCurrentPage(1); }}
+        />
       </div>
 
-      {/* Mobile Cards */}
       <div className="lg:hidden space-y-3">
-        {leads.map((lead, i) => (
+        {paginatedLeads.map((lead, i) => (
           <motion.div
             key={lead.id}
             initial={{ opacity: 0, y: 10 }}
@@ -137,7 +194,7 @@ export function LeadsTable({ leads, onAddLead, onEdit, onDelete }: LeadsTablePro
                 {lead.status}
               </span>
             </div>
-            
+
             <div className="space-y-2 mb-4">
               <div className="flex items-center gap-2 text-sm text-[#64748B]">
                 <Phone size={14} />
@@ -160,12 +217,42 @@ export function LeadsTable({ leads, onAddLead, onEdit, onDelete }: LeadsTablePro
               <button className="flex-1 flex items-center justify-center gap-2 py-2 bg-[#2563EB] text-white rounded-xl text-sm font-medium">
                 <Phone size={16} /> Call
               </button>
+              {onViewCustomer && (
+                <button onClick={() => onViewCustomer(lead)} className="px-3 py-2 border border-[#E2E8F0] rounded-xl text-sm text-[#2563EB] font-medium hover:bg-[#F8FAFC] transition-colors">
+                  View
+                </button>
+              )}
               <button className="p-2 border border-[#E2E8F0] rounded-xl text-[#64748B]">
                 <MoreHorizontal size={18} />
               </button>
             </div>
           </motion.div>
         ))}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between px-2 py-3">
+            <p className="text-sm text-[#64748B]">
+              <span className="font-medium text-[#0F172A]">{startIndex + 1}</span> to{" "}
+              <span className="font-medium text-[#0F172A]">{Math.min(startIndex + itemsPerPage, filtered.length)}</span> of{" "}
+              <span className="font-medium text-[#0F172A]">{filtered.length}</span>
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setCurrentPage(effectivePage - 1)}
+                disabled={effectivePage === 1}
+                className="px-3 py-1.5 text-sm border border-[#E2E8F0] rounded-lg hover:bg-[#F8FAFC] disabled:opacity-50"
+              >
+                Previous
+              </button>
+              <button
+                onClick={() => setCurrentPage(effectivePage + 1)}
+                disabled={effectivePage === totalPages}
+                className="px-3 py-1.5 text-sm border border-[#E2E8F0] rounded-lg hover:bg-[#F8FAFC] disabled:opacity-50"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

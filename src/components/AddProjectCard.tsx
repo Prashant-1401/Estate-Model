@@ -4,6 +4,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Building2, MapPin, Users, IndianRupee, Calendar, FileText, Save } from "lucide-react";
 import type { Project } from "@/lib/types";
+import { useToast } from "@/lib/toast-context";
 
 interface AddProjectCardProps {
   isOpen: boolean;
@@ -25,8 +26,27 @@ export function AddProjectCard({ isOpen, onClose, onSubmit }: AddProjectCardProp
     status: "Planning" as Project["status"],
   });
 
+  const [errors, setErrors] = useState<{ name?: string; developer?: string; priceRange?: string }>({});
+
+  const { showToast } = useToast();
+
+  const validate = () => {
+    const newErrors: { name?: string; developer?: string; priceRange?: string } = {};
+    if (!formData.name.trim()) newErrors.name = "Project name is required";
+    else if (formData.name.trim().length < 2) newErrors.name = "Project name must be at least 2 characters";
+    if (!formData.developer.trim()) newErrors.developer = "Developer is required";
+    if (!formData.priceRange.trim()) newErrors.priceRange = "Price range is required";
+    return newErrors;
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const validationErrors = validate();
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
+      showToast(Object.values(validationErrors)[0], "error");
+      return;
+    }
     const project: Project = {
       id: `PJ-${Date.now().toString(36).toUpperCase()}`,
       name: formData.name,
@@ -43,6 +63,7 @@ export function AddProjectCard({ isOpen, onClose, onSubmit }: AddProjectCardProp
     onSubmit(project);
     onClose();
     setFormData({ name: "", developer: "", location: "", totalUnits: "", unitsSold: "", launchDate: "", completionDate: "", priceRange: "", description: "", status: "Planning" });
+    setErrors({});
   };
 
   if (!isOpen) return null;
@@ -79,20 +100,22 @@ export function AddProjectCard({ isOpen, onClose, onSubmit }: AddProjectCardProp
                 <label className="text-sm font-medium text-[#0F172A]">Project Name *</label>
                 <div className="relative">
                   <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 text-[#64748B]" size={18} />
-                  <input type="text" required value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  <input type="text" value={formData.name} onChange={(e) => { setFormData({ ...formData, name: e.target.value }); setErrors({ ...errors, name: undefined }); }}
                     className="w-full pl-10 pr-4 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition-all"
                     placeholder="Palm Crescent Residences" />
                 </div>
+                {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name}</p>}
               </div>
 
               <div className="space-y-1.5">
                 <label className="text-sm font-medium text-[#0F172A]">Developer *</label>
                 <div className="relative">
                   <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 text-[#64748B]" size={18} />
-                  <input type="text" required value={formData.developer} onChange={(e) => setFormData({ ...formData, developer: e.target.value })}
+                  <input type="text" value={formData.developer} onChange={(e) => { setFormData({ ...formData, developer: e.target.value }); setErrors({ ...errors, developer: undefined }); }}
                     className="w-full pl-10 pr-4 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition-all"
                     placeholder="Emaar Properties" />
                 </div>
+                {errors.developer && <p className="text-xs text-red-500 mt-1">{errors.developer}</p>}
               </div>
 
               <div className="space-y-1.5">
@@ -160,10 +183,11 @@ export function AddProjectCard({ isOpen, onClose, onSubmit }: AddProjectCardProp
                 <label className="text-sm font-medium text-[#0F172A]">Price Range *</label>
                 <div className="relative">
                   <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 text-[#64748B]" size={18} />
-                  <input type="text" required value={formData.priceRange} onChange={(e) => setFormData({ ...formData, priceRange: e.target.value })}
+                  <input type="text" value={formData.priceRange} onChange={(e) => { setFormData({ ...formData, priceRange: e.target.value }); setErrors({ ...errors, priceRange: undefined }); }}
                     className="w-full pl-10 pr-4 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition-all"
                     placeholder="₹50L - ₹2.5Cr" />
                 </div>
+                {errors.priceRange && <p className="text-xs text-red-500 mt-1">{errors.priceRange}</p>}
               </div>
 
               <div className="sm:col-span-2 space-y-1.5">

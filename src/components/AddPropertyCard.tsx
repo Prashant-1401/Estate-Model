@@ -4,6 +4,7 @@ import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, MapPin, Bed, Bath, Square, Building, IndianRupee, Save, ImagePlus, Trash2 } from "lucide-react";
 import type { Property } from "@/lib/types";
+import { useToast } from "@/lib/toast-context";
 
 interface AddPropertyCardProps {
   isOpen: boolean;
@@ -12,6 +13,7 @@ interface AddPropertyCardProps {
 }
 
 export function AddPropertyCard({ isOpen, onClose, onSubmit }: AddPropertyCardProps) {
+  const { showToast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [formData, setFormData] = useState({
     title: "",
@@ -24,6 +26,19 @@ export function AddPropertyCard({ isOpen, onClose, onSubmit }: AddPropertyCardPr
     status: "Available" as Property["status"],
   });
   const [photos, setPhotos] = useState<string[]>([]);
+  const [errors, setErrors] = useState<{ title?: string; price?: string; bedrooms?: string; bathrooms?: string }>({});
+
+  const validate = () => {
+    const newErrors: typeof errors = {};
+    if (!formData.title.trim()) newErrors.title = "Title is required";
+    else if (formData.title.trim().length < 3) newErrors.title = "Title must be at least 3 characters";
+    if (!formData.price.trim()) newErrors.price = "Price is required";
+    if (!formData.bedrooms.trim()) newErrors.bedrooms = "Bedrooms is required";
+    else if (isNaN(Number(formData.bedrooms)) || Number(formData.bedrooms) <= 0) newErrors.bedrooms = "Must be a positive number";
+    if (!formData.bathrooms.trim()) newErrors.bathrooms = "Bathrooms is required";
+    else if (isNaN(Number(formData.bathrooms)) || Number(formData.bathrooms) <= 0) newErrors.bathrooms = "Must be a positive number";
+    return newErrors;
+  };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -45,6 +60,13 @@ export function AddPropertyCard({ isOpen, onClose, onSubmit }: AddPropertyCardPr
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const validationErrors = validate();
+    setErrors(validationErrors);
+    if (Object.keys(validationErrors).length > 0) {
+      const firstError = Object.values(validationErrors).find(Boolean) as string;
+      showToast(firstError, "error");
+      return;
+    }
     const property: Property = {
       id: `PR-${Date.now().toString(36).toUpperCase()}`,
       title: formData.title,
@@ -61,6 +83,7 @@ export function AddPropertyCard({ isOpen, onClose, onSubmit }: AddPropertyCardPr
     onClose();
     setFormData({ title: "", location: "", price: "", bedrooms: "", bathrooms: "", area: "", type: "", status: "Available" });
     setPhotos([]);
+    setErrors({});
   };
 
   if (!isOpen) return null;
@@ -97,10 +120,11 @@ export function AddPropertyCard({ isOpen, onClose, onSubmit }: AddPropertyCardPr
                 <label className="text-sm font-medium text-[#0F172A]">Property Title *</label>
                 <div className="relative">
                   <Building className="absolute left-3 top-1/2 -translate-y-1/2 text-[#64748B]" size={18} />
-                  <input type="text" required value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                  <input type="text" required value={formData.title} onChange={(e) => { setFormData({ ...formData, title: e.target.value }); setErrors((prev) => ({ ...prev, title: undefined })); }}
                     className="w-full pl-10 pr-4 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition-all"
                     placeholder="Luxury 5BR Villa, Palm Jumeirah" />
                 </div>
+                {errors.title && <p className="text-xs text-red-500 mt-0.5">{errors.title}</p>}
               </div>
 
               <div className="space-y-1.5">
@@ -117,30 +141,33 @@ export function AddPropertyCard({ isOpen, onClose, onSubmit }: AddPropertyCardPr
                 <label className="text-sm font-medium text-[#0F172A]">Price *</label>
                 <div className="relative">
                   <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 text-[#64748B]" size={18} />
-                  <input type="text" required value={formData.price} onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                  <input type="text" required value={formData.price} onChange={(e) => { setFormData({ ...formData, price: e.target.value }); setErrors((prev) => ({ ...prev, price: undefined })); }}
                     className="w-full pl-10 pr-4 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition-all"
                     placeholder="₹1,45,00,000" />
                 </div>
+                {errors.price && <p className="text-xs text-red-500 mt-0.5">{errors.price}</p>}
               </div>
 
               <div className="space-y-1.5">
                 <label className="text-sm font-medium text-[#0F172A]">Bedrooms *</label>
                 <div className="relative">
                   <Bed className="absolute left-3 top-1/2 -translate-y-1/2 text-[#64748B]" size={18} />
-                  <input type="number" required min={1} value={formData.bedrooms} onChange={(e) => setFormData({ ...formData, bedrooms: e.target.value })}
+                  <input type="number" required min={1} value={formData.bedrooms} onChange={(e) => { setFormData({ ...formData, bedrooms: e.target.value }); setErrors((prev) => ({ ...prev, bedrooms: undefined })); }}
                     className="w-full pl-10 pr-4 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition-all"
                     placeholder="5" />
                 </div>
+                {errors.bedrooms && <p className="text-xs text-red-500 mt-0.5">{errors.bedrooms}</p>}
               </div>
 
               <div className="space-y-1.5">
                 <label className="text-sm font-medium text-[#0F172A]">Bathrooms *</label>
                 <div className="relative">
                   <Bath className="absolute left-3 top-1/2 -translate-y-1/2 text-[#64748B]" size={18} />
-                  <input type="number" required min={1} value={formData.bathrooms} onChange={(e) => setFormData({ ...formData, bathrooms: e.target.value })}
+                  <input type="number" required min={1} value={formData.bathrooms} onChange={(e) => { setFormData({ ...formData, bathrooms: e.target.value }); setErrors((prev) => ({ ...prev, bathrooms: undefined })); }}
                     className="w-full pl-10 pr-4 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition-all"
                     placeholder="6" />
                 </div>
+                {errors.bathrooms && <p className="text-xs text-red-500 mt-0.5">{errors.bathrooms}</p>}
               </div>
 
               <div className="space-y-1.5">
