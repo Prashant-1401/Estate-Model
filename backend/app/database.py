@@ -12,12 +12,15 @@ if "sslmode=require" in settings.database_url:
 
 def _clean_url(url: str) -> str:
     parts = urlsplit(url)
+    scheme = parts.scheme
+    if scheme in ("postgres", "postgresql"):
+        scheme = "postgresql+asyncpg"
     query = [
         kv
         for kv in parse_qsl(parts.query, keep_blank_values=True)
         if kv[0] not in ("sslmode", "channel_binding")
     ]
-    return urlunsplit((parts.scheme, parts.netloc, parts.path, urlencode(query), parts.fragment))
+    return urlunsplit((scheme, parts.netloc, parts.path, urlencode(query), parts.fragment))
 
 
 clean_url = _clean_url(settings.database_url)
