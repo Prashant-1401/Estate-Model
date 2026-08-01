@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { api } from "@/lib/api";
 import { useToast } from "@/lib/toast-context";
+import { usePaginatedData } from "@/lib/use-paginated-data";
 import { DashboardLayout } from "@/components/Layout";
 import { DashboardView } from "@/components/DashboardView";
 import { LeadsTable } from "@/components/LeadsTable";
@@ -20,11 +21,16 @@ import { AddUserCard } from "@/components/AddUserCard";
 import { EditLeadCard } from "@/components/EditLeadCard";
 import { EditPropertyCard } from "@/components/EditPropertyCard";
 import { EditProjectCard } from "@/components/EditProjectCard";
-import { Plus, Building2 as ProjectIcon, Edit2, Trash2 } from "lucide-react";
-import type { Property, Project, Lead, UserData } from "@/lib/types";
+import { Plus, Building2 as ProjectIcon, Edit2, Trash2, AlertTriangle, RefreshCw } from "lucide-react";
+import type { Property, Project, Lead, UserData, DashboardStats } from "@/lib/types";
 import { InquiryTable } from "@/components/InquiryTable";
 import { Pagination } from "@/components/Pagination";
 import type { Inquiry } from "@/lib/types";
+
+const EMPTY_STATS: DashboardStats = {
+  total_leads: 0, today_leads: 0, hot_leads: 0, total_properties: 0,
+  total_projects: 0, total_inquiries: 0, total_users: 0, revenue_mtd: "₹0",
+};
 
 function DashboardContent() {
   const { hasRole } = useAuth();
@@ -40,39 +46,30 @@ function DashboardContent() {
   const [editingProperty, setEditingProperty] = useState<Property | null>(null);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{ type: string; id: string } | null>(null);
-  const [leads, setLeads] = useState<Lead[]>([]);
-  const [users, setUsers] = useState<UserData[]>([]);
-  const [properties, setProperties] = useState<Property[]>([]);
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [inquiries, setInquiries] = useState<Inquiry[]>([]);
-  const [stats, setStats] = useState({ total_leads: 0, today_leads: 0, hot_leads: 0, total_properties: 0, total_projects: 0, total_inquiries: 0, total_users: 0, revenue_mtd: "₹0" });
   const [selectedCustomer, setSelectedCustomer] = useState<Lead | null>(null);
-  const [propPage, setPropPage] = useState(1);
-  const [propPerPage, setPropPerPage] = useState(9);
-  const [projPage, setProjPage] = useState(1);
-  const [projPerPage, setProjPerPage] = useState(10);
+  const [stats, setStats] = useState<DashboardStats>(EMPTY_STATS);
+  const [statsError, setStatsError] = useState("");
 
-  async function reload() {
-    const [l, p, pr, u, i, s] = await Promise.all([
-      api.get<Lead[]>("/api/leads").catch(() => [] as Lead[]),
-      api.get<Property[]>("/api/properties").catch(() => [] as Property[]),
-      api.get<Project[]>("/api/projects").catch(() => [] as Project[]),
-      api.get<UserData[]>("/api/users").catch(() => [] as UserData[]),
-      api.get<Inquiry[]>("/api/inquiries").catch(() => [] as Inquiry[]),
-      api.get<typeof stats>("/api/dashboard/stats").catch(() => ({ total_leads: 0, today_leads: 0, hot_leads: 0, total_properties: 0, total_projects: 0, total_inquiries: 0, total_users: 0, revenue_mtd: "₹0" })),
-    ]);
-    setLeads(l);
-    setProperties(p);
-    setProjects(pr);
-    setUsers(u);
-    setInquiries(i);
-    setStats(s);
+  const leads = usePaginatedData<Lead>("/api/leads");
+  const properties = usePaginatedData<Property>("/api/properties", { initialPerPage: 9 });
+  const projects = usePaginatedData<Project>("/api/projects", { initialPerPage: 10 });
+  const users = usePaginatedData<UserData>("/api/users");
+  const inquiries = usePaginatedData<Inquiry>("/api/inquiries");
+
+  async function reloadStats() {
+    try {
+      const s = await api.get<DashboardStats>("/api/dashboard/stats");
+      setStats(s);
+      setStatsError("");
+    } catch (e) {
+      setStatsError(e instanceof Error ? e.message : "Failed to load dashboard data");
+    }
   }
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      await reload();
+      await reloadStats();
       if (!cancelled) setLoading(false);
     })();
     return () => { cancelled = true; };
@@ -92,7 +89,7 @@ function DashboardContent() {
         assigned: "Unassigned",
         date: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
       });
-      await reload();
+      await Promise.all([leads.reload(), reloadStats()]);
       showToast("Lead created successfully", "success");
     } catch (e: unknown) {
       showToast(e instanceof Error ? e.message : "Failed to create lead", "error");
@@ -102,7 +99,7 @@ function DashboardContent() {
   const handleAddProperty = async (property: Property) => {
     try {
       await api.post("/api/properties", property);
-      await reload();
+      await Promise.all([properties.reload(), reloadStats()]);
       showToast("Property added successfully", "success");
     } catch (e: unknown) {
       showToast(e instanceof Error ? e.message : "Failed to add property", "error");
@@ -112,7 +109,7 @@ function DashboardContent() {
   const handleAddProject = async (project: Project) => {
     try {
       await api.post("/api/projects", project);
-      await reload();
+      await Promise.all([projects.reload(), reloadStats()]);
       showToast("Project created successfully", "success");
     } catch (e: unknown) {
       showToast(e instanceof Error ? e.message : "Failed to create project", "error");
@@ -128,7 +125,7 @@ function DashboardContent() {
         role: data.role,
         password: data.password,
       });
-      await reload();
+      await Promise.all([users.reload(), reloadStats()]);
       showToast("User added successfully", "success");
     } catch (e: unknown) {
       showToast(e instanceof Error ? e.message : "Failed to add user", "error");
@@ -146,7 +143,7 @@ function DashboardContent() {
         source: data.source,
         status: data.status,
       });
-      await reload();
+      await leads.reload();
       showToast("Lead updated successfully", "success");
     } catch (e: unknown) {
       showToast(e instanceof Error ? e.message : "Failed to update lead", "error");
@@ -156,7 +153,7 @@ function DashboardContent() {
   const handleEditProperty = async (id: string, property: Property) => {
     try {
       await api.put(`/api/properties/${id}`, property);
-      await reload();
+      await Promise.all([properties.reload(), reloadStats()]);
       showToast("Property updated successfully", "success");
     } catch (e: unknown) {
       showToast(e instanceof Error ? e.message : "Failed to update property", "error");
@@ -166,7 +163,7 @@ function DashboardContent() {
   const handleEditProject = async (id: string, project: Project) => {
     try {
       await api.put(`/api/projects/${id}`, project);
-      await reload();
+      await projects.reload();
       showToast("Project updated successfully", "success");
     } catch (e: unknown) {
       showToast(e instanceof Error ? e.message : "Failed to update project", "error");
@@ -176,7 +173,7 @@ function DashboardContent() {
   const handleDeleteInquiry = async (id: string) => {
     try {
       await api.delete(`/api/inquiries/${id}`);
-      await reload();
+      await Promise.all([inquiries.reload(), reloadStats()]);
       showToast("Inquiry deleted", "success");
     } catch (e: unknown) {
       showToast(e instanceof Error ? e.message : "Failed to delete inquiry", "error");
@@ -188,7 +185,9 @@ function DashboardContent() {
       const endpoint = type === "lead" ? "leads" : type === "property" ? "properties" : type === "project" ? "projects" : null;
       if (endpoint) {
         await api.delete(`/api/${endpoint}/${id}`);
-        await reload();
+        if (type === "lead") await Promise.all([leads.reload(), reloadStats()]);
+        else if (type === "property") await Promise.all([properties.reload(), reloadStats()]);
+        else if (type === "project") await projects.reload();
         showToast(`${type} deleted successfully`, "success");
       }
     } catch (e: unknown) {
@@ -200,7 +199,7 @@ function DashboardContent() {
   const handleUpdateUserRole = async (id: string, role: string) => {
     try {
       await api.put(`/api/users/${id}`, { role });
-      await reload();
+      await users.reload();
       showToast("User role updated", "success");
     } catch (e: unknown) {
       showToast(e instanceof Error ? e.message : "Failed to update role", "error");
@@ -211,7 +210,7 @@ function DashboardContent() {
     try {
       const newStatus = currentStatus === "Active" ? "Inactive" : "Active";
       await api.put(`/api/users/${id}`, { status: newStatus });
-      await reload();
+      await users.reload();
       showToast(`User ${newStatus.toLowerCase()}`, "success");
     } catch (e: unknown) {
       showToast(e instanceof Error ? e.message : "Failed to update user", "error");
@@ -227,7 +226,19 @@ function DashboardContent() {
       case "leads":
         return (
           <LeadsTable
-            leads={leads}
+            items={leads.items}
+            total={leads.total}
+            currentPage={leads.page}
+            itemsPerPage={leads.perPage}
+            loading={leads.loading}
+            error={leads.error}
+            onRetry={leads.reload}
+            onPageChange={leads.setPage}
+            onPageSizeChange={leads.setPerPage}
+            search={leads.search}
+            onSearchChange={leads.setSearch}
+            statusFilter={leads.status}
+            onStatusFilterChange={leads.setStatus}
             onAddLead={() => setIsAddLeadOpen(true)}
             onEdit={canManage ? (lead) => setEditingLead(lead) : undefined}
             onDelete={canManage ? (id) => setDeleteConfirm({ type: "lead", id }) : undefined}
@@ -237,7 +248,19 @@ function DashboardContent() {
       case "inquiries":
         return (
           <InquiryTable
-            inquiries={inquiries}
+            items={inquiries.items}
+            total={inquiries.total}
+            currentPage={inquiries.page}
+            itemsPerPage={inquiries.perPage}
+            loading={inquiries.loading}
+            error={inquiries.error}
+            onRetry={inquiries.reload}
+            onPageChange={inquiries.setPage}
+            onPageSizeChange={inquiries.setPerPage}
+            search={inquiries.search}
+            onSearchChange={inquiries.setSearch}
+            statusFilter={inquiries.status}
+            onStatusFilterChange={inquiries.setStatus}
             onDelete={canManage ? (id) => handleDeleteInquiry(id) : undefined}
           />
         );
@@ -255,7 +278,26 @@ function DashboardContent() {
             </div>
           );
         }
-        return <UsersTable users={users} onAddUser={() => setIsAddUserOpen(true)} onUpdateRole={handleUpdateUserRole} onToggleStatus={handleToggleUserStatus} />;
+        return (
+          <UsersTable
+            items={users.items}
+            total={users.total}
+            currentPage={users.page}
+            itemsPerPage={users.perPage}
+            loading={users.loading}
+            error={users.error}
+            onRetry={users.reload}
+            onPageChange={users.setPage}
+            onPageSizeChange={users.setPerPage}
+            search={users.search}
+            onSearchChange={users.setSearch}
+            statusFilter={users.status}
+            onStatusFilterChange={users.setStatus}
+            onAddUser={() => setIsAddUserOpen(true)}
+            onUpdateRole={handleUpdateUserRole}
+            onToggleStatus={handleToggleUserStatus}
+          />
+        );
       case "properties":
         return (
           <div className="space-y-6">
@@ -274,7 +316,22 @@ function DashboardContent() {
                 </button>
               )}
             </div>
-            {properties.length === 0 ? (
+            {properties.error && (
+              <div className="flex items-center justify-between gap-4 bg-red-50 border border-red-100 rounded-2xl px-4 py-3">
+                <div className="flex items-center gap-3 text-sm text-[#EF4444]">
+                  <AlertTriangle size={16} />
+                  <span>{properties.error}</span>
+                </div>
+                <button onClick={properties.reload} className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-red-200 rounded-lg text-sm font-medium text-[#EF4444] hover:bg-red-100 transition-colors">
+                  <RefreshCw size={14} /> Retry
+                </button>
+              </div>
+            )}
+            {properties.loading && properties.items.length === 0 ? (
+              <div className="flex items-center justify-center py-24">
+                <div className="w-10 h-10 border-4 border-[#2563EB] border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : properties.items.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-center">
                 <div className="w-16 h-16 bg-[#F8FAFC] rounded-2xl flex items-center justify-center mb-4 border border-[#E2E8F0]">
                   <span className="text-2xl">🏠</span>
@@ -285,7 +342,7 @@ function DashboardContent() {
             ) : (
               <>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {properties.slice((propPage - 1) * propPerPage, propPage * propPerPage).map((property) => (
+                  {properties.items.map((property) => (
                     <PropertyCard
                       key={property.id}
                       id={property.id}
@@ -300,11 +357,11 @@ function DashboardContent() {
                       images={property.images}
                       featured={property.featured}
                       onViewDetails={(id) => {
-                        const p = properties.find((pr) => pr.id === id);
+                        const p = properties.items.find((pr) => pr.id === id);
                         if (p) setSelectedProperty(p);
                       }}
                       onEdit={canManage ? (id) => {
-                        const p = properties.find((pr) => pr.id === id);
+                        const p = properties.items.find((pr) => pr.id === id);
                         if (p) setEditingProperty(p);
                       } : undefined}
                       onDelete={canManage ? (id) => setDeleteConfirm({ type: "property", id }) : undefined}
@@ -312,14 +369,15 @@ function DashboardContent() {
                   ))}
                 </div>
                 <Pagination
-                  currentPage={Math.min(propPage, Math.ceil(properties.length / propPerPage))}
-                  totalPages={Math.ceil(properties.length / propPerPage)}
-                  totalItems={properties.length}
-                  itemsPerPage={propPerPage}
-                  onPageChange={(p) => setPropPage(p)}
-                  onPageSizeChange={(s) => { setPropPerPage(s); setPropPage(1); }}
+                  currentPage={Math.min(properties.page, properties.pages)}
+                  totalPages={properties.pages}
+                  totalItems={properties.total}
+                  itemsPerPage={properties.perPage}
+                  onPageChange={properties.setPage}
+                  onPageSizeChange={properties.setPerPage}
                   pageSizeOptions={[9, 18, 36]}
                   showPageSizeSelector
+                  noun="properties"
                 />
               </>
             )}
@@ -343,7 +401,22 @@ function DashboardContent() {
                 </button>
               )}
             </div>
-            {projects.length === 0 ? (
+            {projects.error && (
+              <div className="flex items-center justify-between gap-4 bg-red-50 border border-red-100 rounded-2xl px-4 py-3">
+                <div className="flex items-center gap-3 text-sm text-[#EF4444]">
+                  <AlertTriangle size={16} />
+                  <span>{projects.error}</span>
+                </div>
+                <button onClick={projects.reload} className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-red-200 rounded-lg text-sm font-medium text-[#EF4444] hover:bg-red-100 transition-colors">
+                  <RefreshCw size={14} /> Retry
+                </button>
+              </div>
+            )}
+            {projects.loading && projects.items.length === 0 ? (
+              <div className="flex items-center justify-center py-24">
+                <div className="w-10 h-10 border-4 border-[#2563EB] border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : projects.items.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-center">
                 <div className="w-16 h-16 bg-[#F8FAFC] rounded-2xl flex items-center justify-center mb-4 border border-[#E2E8F0]">
                   <ProjectIcon size={32} className="text-[#64748B]" />
@@ -363,7 +436,7 @@ function DashboardContent() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[#E2E8F0]">
-                      {projects.slice((projPage - 1) * projPerPage, projPage * projPerPage).map((project) => (
+                      {projects.items.map((project) => (
                         <tr key={project.id} className="hover:bg-[#F8FAFC] transition-colors">
                           <td className="px-6 py-4">
                             <p className="text-sm font-medium text-[#0F172A]">{project.name}</p>
@@ -402,13 +475,14 @@ function DashboardContent() {
                   </table>
                 </div>
                 <Pagination
-                  currentPage={Math.min(projPage, Math.ceil(projects.length / projPerPage))}
-                  totalPages={Math.ceil(projects.length / projPerPage)}
-                  totalItems={projects.length}
-                  itemsPerPage={projPerPage}
-                  onPageChange={(p) => setProjPage(p)}
-                  onPageSizeChange={(s) => { setProjPerPage(s); setProjPage(1); }}
+                  currentPage={Math.min(projects.page, projects.pages)}
+                  totalPages={projects.pages}
+                  totalItems={projects.total}
+                  itemsPerPage={projects.perPage}
+                  onPageChange={projects.setPage}
+                  onPageSizeChange={projects.setPerPage}
                   showPageSizeSelector
+                  noun="projects"
                 />
               </div>
             )}
@@ -453,6 +527,17 @@ function DashboardContent() {
   return (
     <>
       <DashboardLayout activeView={activeView} setActiveView={setActiveView} onFabClick={() => setIsAddLeadOpen(true)}>
+        {statsError && (
+          <div className="mb-6 flex items-center justify-between gap-4 bg-red-50 border border-red-100 rounded-2xl px-4 py-3">
+            <div className="flex items-center gap-3 text-sm text-[#EF4444]">
+              <AlertTriangle size={16} />
+              <span>{statsError}</span>
+            </div>
+            <button onClick={() => reloadStats()} className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-red-200 rounded-lg text-sm font-medium text-[#EF4444] hover:bg-red-100 transition-colors">
+              <RefreshCw size={14} /> Retry
+            </button>
+          </div>
+        )}
         {renderView()}
       </DashboardLayout>
 

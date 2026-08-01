@@ -1,23 +1,37 @@
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.models.inquiry import Inquiry
 from app.schemas.inquiry import InquiryCreate, InquiryRead, InquiryUpdate
+from app.schemas.common import Page
+from app.pagination import paginate
 from app.auth import require_role
 from app.constants import Role
 
 router = APIRouter(prefix="/api/inquiries", tags=["inquiries"])
 
 
-@router.get("", response_model=list[InquiryRead])
+@router.get("", response_model=Page[InquiryRead])
 async def list_inquiries(
+    page: int = Query(1, ge=1),
+    per_page: int = Query(10, ge=1, le=100),
+    search: str = "",
+    status: str = "",
     db: AsyncSession = Depends(get_db),
     _=Depends(require_role(Role.ADMIN, Role.MANAGER)),
 ):
-    result = await db.execute(select(Inquiry).order_by(Inquiry.created_at.desc()))
-    return result.scalars().all()
+    stmt = select(Inquiry).order_by(Inquiry.created_at.desc())
+    if search:
+        like = f"%{search}%"
+        stmt = stmt.where(
+            or_(Inquiry.id.ilike(like), Inquiry.name.ilike(like), Inquiry.phone.ilike(like), Inquiry.email.ilike(like))
+        )
+    if status:
+        stmt = stmt.where(Inquiry.status == status)
+    items, total, pages = await paginate(db, stmt, page, per_page)
+    return Page(items=items, total=total, page=page, per_page=per_page, pages=pages)
 
 
 @router.get("/{inquiry_id}", response_model=InquiryRead)

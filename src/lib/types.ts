@@ -1,5 +1,13 @@
 export type Role = "admin" | "manager" | "agent";
 
+export interface Paginated<T> {
+  items: T[];
+  total: number;
+  page: number;
+  per_page: number;
+  pages: number;
+}
+
 export type ProjectStatus = "Planning" | "Under Construction" | "Completed" | "On Hold";
 
 export interface Project {

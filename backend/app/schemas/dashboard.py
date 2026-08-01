@@ -10,3 +10,5 @@ class DashboardStats(BaseModel):
     sold_properties: int = 0
     total_projects: int = 0
     total_users: int = 0
+    total_inquiries: int = 0
+    revenue_mtd: str = "₹0"

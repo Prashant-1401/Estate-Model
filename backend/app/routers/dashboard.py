@@ -9,7 +9,9 @@ from app.models.lead import Lead
 from app.models.property import Property
 from app.models.project import Project
 from app.models.user import User
+from app.models.inquiry import Inquiry
 from app.schemas.dashboard import DashboardStats
+from app.money import parse_inr_price, format_inr
 from app.auth import require_role
 from app.constants import Role
 
@@ -42,6 +44,18 @@ async def get_dashboard_stats(
 
     total_projects = (await db.execute(select(func.count(Project.id)))).scalar() or 0
     total_users = (await db.execute(select(func.count(User.id)))).scalar() or 0
+    total_inquiries = (await db.execute(select(func.count(Inquiry.id)))).scalar() or 0
+
+    month_start = datetime.now(timezone.utc).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    sold_this_month = (
+        await db.execute(
+            select(Property).where(
+                Property.status == "Sold",
+                Property.updated_at >= month_start,
+            )
+        )
+    ).scalars().all()
+    revenue_mtd = format_inr(sum(parse_inr_price(p.price) for p in sold_this_month))
 
     return DashboardStats(
         total_leads=total_leads,
@@ -52,4 +66,6 @@ async def get_dashboard_stats(
         sold_properties=sold_properties,
         total_projects=total_projects,
         total_users=total_users,
+        total_inquiries=total_inquiries,
+        revenue_mtd=revenue_mtd,
     )

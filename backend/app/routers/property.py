@@ -1,23 +1,34 @@
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.models.property import Property
 from app.schemas.property import PropertyCreate, PropertyRead, PropertyUpdate
+from app.schemas.common import Page
+from app.pagination import paginate
 from app.auth import require_role
 from app.constants import Role
 
 router = APIRouter(prefix="/api/properties", tags=["properties"])
 
 
-@router.get("", response_model=list[PropertyRead])
+@router.get("", response_model=Page[PropertyRead])
 async def list_properties(
+    page: int = Query(1, ge=1),
+    per_page: int = Query(10, ge=1, le=100),
+    search: str = "",
     db: AsyncSession = Depends(get_db),
     _=Depends(require_role(Role.ADMIN, Role.MANAGER, Role.AGENT)),
 ):
-    result = await db.execute(select(Property).order_by(Property.created_at.desc()))
-    return result.scalars().all()
+    stmt = select(Property).order_by(Property.created_at.desc())
+    if search:
+        like = f"%{search}%"
+        stmt = stmt.where(
+            or_(Property.title.ilike(like), Property.location.ilike(like))
+        )
+    items, total, pages = await paginate(db, stmt, page, per_page)
+    return Page(items=items, total=total, page=page, per_page=per_page, pages=pages)
 
 
 @router.get("/{property_id}", response_model=PropertyRead)

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Search, Download, MoreHorizontal, Shield, UserCheck, UserX } from "lucide-react";
+import { Search, Download, MoreHorizontal, Shield, UserCheck, UserX, AlertTriangle, RefreshCw } from "lucide-react";
 import { Pagination } from "@/components/Pagination";
 
 interface UserData {
@@ -16,7 +16,19 @@ interface UserData {
 }
 
 interface UsersTableProps {
-  users: UserData[];
+  items: UserData[];
+  total: number;
+  currentPage: number;
+  itemsPerPage: number;
+  loading: boolean;
+  error?: string;
+  onRetry: () => void;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (size: number) => void;
+  search: string;
+  onSearchChange: (value: string) => void;
+  statusFilter: string;
+  onStatusFilterChange: (value: string) => void;
   onAddUser: () => void;
   onUpdateRole?: (id: string, role: string) => void;
   onToggleStatus?: (id: string, currentStatus: string) => void;
@@ -29,31 +41,28 @@ const roleColors: Record<string, string> = {
   Viewer: "bg-slate-50 text-[#64748B] border border-slate-100",
 };
 
-export function UsersTable({ users, onAddUser, onUpdateRole, onToggleStatus }: UsersTableProps) {
+export function UsersTable({
+  items,
+  total,
+  currentPage,
+  itemsPerPage,
+  loading,
+  error,
+  onRetry,
+  onPageChange,
+  onPageSizeChange,
+  search,
+  onSearchChange,
+  statusFilter,
+  onStatusFilterChange,
+  onAddUser,
+  onUpdateRole,
+  onToggleStatus,
+}: UsersTableProps) {
   const [openMenu, setOpenMenu] = useState<string | null>(null);
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("All");
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
 
-  const filteredUsers = users.filter((user) => {
-    const q = search.toLowerCase();
-    const matchesSearch =
-      !q ||
-      user.name.toLowerCase().includes(q) ||
-      user.email.toLowerCase().includes(q) ||
-      user.phone.toLowerCase().includes(q) ||
-      user.role.toLowerCase().includes(q);
-    const matchesStatus = statusFilter === "All" || user.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
-
-  const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
-  const safePage = Math.min(currentPage, Math.max(1, totalPages));
-  const paginatedUsers = filteredUsers.slice(
-    (safePage - 1) * itemsPerPage,
-    safePage * itemsPerPage
-  );
+  const totalPages = Math.max(1, Math.ceil(total / itemsPerPage));
+  const safePage = Math.min(currentPage, totalPages);
 
   return (
     <div className="space-y-4 lg:space-y-6">
@@ -79,10 +88,7 @@ export function UsersTable({ users, onAddUser, onUpdateRole, onToggleStatus }: U
             type="text"
             placeholder="Search users..."
             value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setCurrentPage(1);
-            }}
+            onChange={(e) => onSearchChange(e.target.value)}
             className="w-full pl-9 pr-4 py-2 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition-all"
           />
         </div>
@@ -90,12 +96,9 @@ export function UsersTable({ users, onAddUser, onUpdateRole, onToggleStatus }: U
           {["All", "Active", "Inactive"].map((filter) => (
             <button
               key={filter}
-              onClick={() => {
-                setStatusFilter(filter);
-                setCurrentPage(1);
-              }}
+              onClick={() => onStatusFilterChange(filter === "All" ? "" : filter)}
               className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                statusFilter === filter ? "bg-[#2563EB] text-white" : "bg-[#F8FAFC] text-[#64748B] hover:bg-[#E2E8F0]"
+                (statusFilter || "All") === filter ? "bg-[#2563EB] text-white" : "bg-[#F8FAFC] text-[#64748B] hover:bg-[#E2E8F0]"
               }`}
             >
               {filter}
@@ -104,7 +107,19 @@ export function UsersTable({ users, onAddUser, onUpdateRole, onToggleStatus }: U
         </div>
       </div>
 
-      {filteredUsers.length === 0 ? (
+      {error && (
+        <div className="flex items-center justify-between gap-4 bg-red-50 border border-red-100 rounded-2xl px-4 py-3">
+          <div className="flex items-center gap-3 text-sm text-[#EF4444]">
+            <AlertTriangle size={16} />
+            <span>{error}</span>
+          </div>
+          <button onClick={onRetry} className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-red-200 rounded-lg text-sm font-medium text-[#EF4444] hover:bg-red-100 transition-colors">
+            <RefreshCw size={14} /> Retry
+          </button>
+        </div>
+      )}
+
+      {items.length === 0 && !loading && !error ? (
         <div className="flex flex-col items-center justify-center py-16 text-center bg-white rounded-2xl border border-[#E2E8F0]">
           <div className="w-16 h-16 bg-[#F8FAFC] rounded-2xl flex items-center justify-center mb-4 border border-[#E2E8F0]">
             <Shield size={28} className="text-[#64748B]" />
@@ -124,83 +139,94 @@ export function UsersTable({ users, onAddUser, onUpdateRole, onToggleStatus }: U
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#E2E8F0]">
-                {paginatedUsers.map((user) => (
-                  <motion.tr key={user.id}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="hover:bg-[#F8FAFC] transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-[#2563EB]/10 flex items-center justify-center text-xs font-bold text-[#2563EB]">
-                          {user.name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2)}
-                        </div>
-                        <p className="text-sm font-medium text-[#0F172A]">{user.name}</p>
-                      </div>
+                {loading && items.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="px-6 py-16 text-center">
+                      <div className="w-8 h-8 border-2 border-[#2563EB] border-t-transparent rounded-full animate-spin mx-auto" />
                     </td>
-                    <td className="px-6 py-4 text-sm text-[#64748B]">{user.email}</td>
-                    <td className="px-6 py-4 text-sm text-[#64748B]">{user.phone || "—"}</td>
-                    <td className="px-6 py-4">
-                      <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${roleColors[user.role] || roleColors.Viewer}`}>
-                        <Shield size={12} />
-                        {user.role}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${
-                        user.status === "Active" ? "bg-green-50 text-[#22C55E] border border-green-100" : "bg-red-50 text-[#EF4444] border border-red-100"
-                      }`}>
-                        {user.status === "Active" ? <UserCheck size={12} /> : <UserX size={12} />}
-                        {user.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-[#64748B]">{user.created}</td>
-                    <td className="px-6 py-4 relative">
-                      <button onClick={() => setOpenMenu(openMenu === user.id ? null : user.id)}
-                        className="p-2 hover:bg-[#F8FAFC] rounded-lg transition-colors">
-                        <MoreHorizontal size={16} className="text-[#64748B]" />
-                      </button>
-                      {openMenu === user.id && (
-                        <>
-                          <div className="fixed inset-0 z-10" onClick={() => setOpenMenu(null)} />
-                          <div className="absolute right-0 top-full mt-1 w-40 bg-white rounded-xl shadow-xl border border-[#E2E8F0] py-2 z-20">
-                            <button onClick={() => { onUpdateRole?.(user.id, "admin"); setOpenMenu(null); }}
-                              className="w-full flex items-center gap-2 px-4 py-2 text-sm text-[#0F172A] hover:bg-[#F8FAFC] transition-colors">
-                              <Shield size={14} />
-                              Make Admin
-                            </button>
-                            <button onClick={() => { onUpdateRole?.(user.id, "manager"); setOpenMenu(null); }}
-                              className="w-full flex items-center gap-2 px-4 py-2 text-sm text-[#0F172A] hover:bg-[#F8FAFC] transition-colors">
-                              <Shield size={14} />
-                              Make Manager
-                            </button>
-                            <button onClick={() => { onUpdateRole?.(user.id, "agent"); setOpenMenu(null); }}
-                              className="w-full flex items-center gap-2 px-4 py-2 text-sm text-[#0F172A] hover:bg-[#F8FAFC] transition-colors">
-                              <Shield size={14} />
-                              Make Agent
-                            </button>
-                            <div className="border-t border-[#E2E8F0] my-1" />
-                            <button onClick={() => { onToggleStatus?.(user.id, user.status); setOpenMenu(null); }}
-                              className="w-full flex items-center gap-2 px-4 py-2 text-sm text-[#EF4444] hover:bg-red-50 transition-colors">
-                              <UserX size={14} />
-                              {user.status === "Active" ? "Deactivate" : "Activate"}
-                            </button>
+                  </tr>
+                ) : (
+                  items.map((user) => (
+                    <motion.tr key={user.id}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="hover:bg-[#F8FAFC] transition-colors">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-[#2563EB]/10 flex items-center justify-center text-xs font-bold text-[#2563EB]">
+                            {user.name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2)}
                           </div>
-                        </>
-                      )}
-                    </td>
-                  </motion.tr>
-                ))}
+                          <p className="text-sm font-medium text-[#0F172A]">{user.name}</p>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-[#64748B]">{user.email}</td>
+                      <td className="px-6 py-4 text-sm text-[#64748B]">{user.phone || "—"}</td>
+                      <td className="px-6 py-4">
+                        <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${roleColors[user.role] || roleColors.Viewer}`}>
+                          <Shield size={12} />
+                          {user.role}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${
+                          user.status === "Active" ? "bg-green-50 text-[#22C55E] border border-green-100" : "bg-red-50 text-[#EF4444] border border-red-100"
+                        }`}>
+                          {user.status === "Active" ? <UserCheck size={12} /> : <UserX size={12} />}
+                          {user.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-[#64748B]">{user.created}</td>
+                      <td className="px-6 py-4 relative">
+                        <button onClick={() => setOpenMenu(openMenu === user.id ? null : user.id)}
+                          className="p-2 hover:bg-[#F8FAFC] rounded-lg transition-colors">
+                          <MoreHorizontal size={16} className="text-[#64748B]" />
+                        </button>
+                        {openMenu === user.id && (
+                          <>
+                            <div className="fixed inset-0 z-10" onClick={() => setOpenMenu(null)} />
+                            <div className="absolute right-0 top-full mt-1 w-40 bg-white rounded-xl shadow-xl border border-[#E2E8F0] py-2 z-20">
+                              <button onClick={() => { onUpdateRole?.(user.id, "admin"); setOpenMenu(null); }}
+                                className="w-full flex items-center gap-2 px-4 py-2 text-sm text-[#0F172A] hover:bg-[#F8FAFC] transition-colors">
+                                <Shield size={14} />
+                                Make Admin
+                              </button>
+                              <button onClick={() => { onUpdateRole?.(user.id, "manager"); setOpenMenu(null); }}
+                                className="w-full flex items-center gap-2 px-4 py-2 text-sm text-[#0F172A] hover:bg-[#F8FAFC] transition-colors">
+                                <Shield size={14} />
+                                Make Manager
+                              </button>
+                              <button onClick={() => { onUpdateRole?.(user.id, "agent"); setOpenMenu(null); }}
+                                className="w-full flex items-center gap-2 px-4 py-2 text-sm text-[#0F172A] hover:bg-[#F8FAFC] transition-colors">
+                                <Shield size={14} />
+                                Make Agent
+                              </button>
+                              <div className="border-t border-[#E2E8F0] my-1" />
+                              <button onClick={() => { onToggleStatus?.(user.id, user.status); setOpenMenu(null); }}
+                                className="w-full flex items-center gap-2 px-4 py-2 text-sm text-[#EF4444] hover:bg-red-50 transition-colors">
+                                <UserX size={14} />
+                                {user.status === "Active" ? "Deactivate" : "Activate"}
+                              </button>
+                            </div>
+                          </>
+                        )}
+                      </td>
+                    </motion.tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
-          <Pagination
-            currentPage={safePage}
-            totalPages={totalPages}
-            totalItems={filteredUsers.length}
-            itemsPerPage={itemsPerPage}
-            onPageChange={setCurrentPage}
-            onPageSizeChange={(size) => { setItemsPerPage(size); setCurrentPage(1); }}
-          />
+          {total > 0 && (
+            <Pagination
+              currentPage={safePage}
+              totalPages={totalPages}
+              totalItems={total}
+              itemsPerPage={itemsPerPage}
+              onPageChange={onPageChange}
+              onPageSizeChange={onPageSizeChange}
+              noun="users"
+            />
+          )}
         </div>
       )}
     </div>

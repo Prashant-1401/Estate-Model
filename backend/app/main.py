@@ -1,18 +1,28 @@
 from contextlib import asynccontextmanager
+from pathlib import Path
 
+from alembic import command
+from alembic.config import Config
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
-from app.database import engine, Base
+from app.database import engine
 from app.routers import lead, property, project, user, inquiry, dashboard
 from app.seed import seed_users
+
+BACKEND_DIR = Path(__file__).resolve().parent.parent
+
+
+def run_migrations():
+    cfg = Config(str(BACKEND_DIR / "alembic.ini"))
+    cfg.set_main_option("script_location", str(BACKEND_DIR / "alembic"))
+    command.upgrade(cfg, "head")
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    run_migrations()
     await seed_users()
     yield
     await engine.dispose()

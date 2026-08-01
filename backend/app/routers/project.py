@@ -1,23 +1,34 @@
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.models.project import Project
 from app.schemas.project import ProjectCreate, ProjectRead, ProjectUpdate
+from app.schemas.common import Page
+from app.pagination import paginate
 from app.auth import require_role
 from app.constants import Role
 
 router = APIRouter(prefix="/api/projects", tags=["projects"])
 
 
-@router.get("", response_model=list[ProjectRead])
+@router.get("", response_model=Page[ProjectRead])
 async def list_projects(
+    page: int = Query(1, ge=1),
+    per_page: int = Query(10, ge=1, le=100),
+    search: str = "",
     db: AsyncSession = Depends(get_db),
     _=Depends(require_role(Role.ADMIN, Role.MANAGER, Role.AGENT)),
 ):
-    result = await db.execute(select(Project).order_by(Project.created_at.desc()))
-    return result.scalars().all()
+    stmt = select(Project).order_by(Project.created_at.desc())
+    if search:
+        like = f"%{search}%"
+        stmt = stmt.where(
+            or_(Project.name.ilike(like), Project.developer.ilike(like), Project.location.ilike(like))
+        )
+    items, total, pages = await paginate(db, stmt, page, per_page)
+    return Page(items=items, total=total, page=page, per_page=per_page, pages=pages)
 
 
 @router.get("/{project_id}", response_model=ProjectRead)

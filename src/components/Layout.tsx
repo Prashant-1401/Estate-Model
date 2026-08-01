@@ -41,8 +41,8 @@ export function DashboardLayout({ children, activeView, setActiveView, onFabClic
     (item) => !item.roles || hasRole(...item.roles)
   );
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     router.push("/login");
   };
 

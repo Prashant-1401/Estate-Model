@@ -7,14 +7,12 @@ import { api } from "@/lib/api";
 interface AuthContextType {
   user: AuthUser | null;
   login: (email: string, password: string) => Promise<boolean>;
-  logout: () => void;
+  logout: () => Promise<void>;
   isAuthenticated: boolean;
   hasRole: (...roles: Role[]) => boolean;
 }
 
 interface LoginResponse {
-  access_token: string;
-  token_type: string;
   user: {
     id: string;
     name: string;
@@ -41,16 +39,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
+    localStorage.removeItem("estatecrm_token");
     let cancelled = false;
     (async () => {
-      const token = localStorage.getItem("estatecrm_token");
-      if (token) {
-        try {
-          const u = await api.get<LoginResponse["user"]>("/api/auth/me");
-          if (!cancelled) setUser({ ...u, initials: getInitials(u.name) });
-        } catch {
-          localStorage.removeItem("estatecrm_token");
-        }
+      try {
+        const u = await api.get<LoginResponse["user"]>("/api/auth/me");
+        if (!cancelled) setUser({ ...u, initials: getInitials(u.name) });
+      } catch {
+        if (!cancelled) setUser(null);
       }
       if (!cancelled) setIsLoaded(true);
     })();
@@ -60,7 +56,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
       const res = await api.post<LoginResponse>("/api/auth/login", { email, password });
-      localStorage.setItem("estatecrm_token", res.access_token);
       setUser({ ...res.user, initials: getInitials(res.user.name) });
       return true;
     } catch {
@@ -68,9 +63,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const logout = () => {
+  const logout = async (): Promise<void> => {
+    try {
+      await api.post("/api/auth/logout");
+    } catch {}
     setUser(null);
-    localStorage.removeItem("estatecrm_token");
   };
 
   const hasRole = (...roles: Role[]) => {

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Search, Filter, X, Mail, Phone, MessageSquare, MoreHorizontal, MapPin, Building, IndianRupee, Pencil, Trash2 } from "lucide-react";
+import { Search, Filter, X, Mail, Phone, MessageSquare, MoreHorizontal, MapPin, Building, IndianRupee, Pencil, Trash2, AlertTriangle, RefreshCw } from "lucide-react";
 import type { Inquiry } from "@/lib/types";
 import { Pagination } from "@/components/Pagination";
 
@@ -15,37 +15,49 @@ const statusColors: Record<string, string> = {
 const statusOptions = ["New", "Contacted", "Closed"] as const;
 
 interface InquiryTableProps {
-  inquiries: Inquiry[];
+  items: Inquiry[];
+  total: number;
+  currentPage: number;
+  itemsPerPage: number;
+  loading: boolean;
+  error?: string;
+  onRetry: () => void;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (size: number) => void;
+  search: string;
+  onSearchChange: (value: string) => void;
+  statusFilter: string;
+  onStatusFilterChange: (value: string) => void;
   onEdit?: (inquiry: Inquiry) => void;
   onDelete?: (id: string) => void;
 }
 
-export function InquiryTable({ inquiries, onEdit, onDelete }: InquiryTableProps) {
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("");
+export function InquiryTable({
+  items,
+  total,
+  currentPage,
+  itemsPerPage,
+  loading,
+  error,
+  onRetry,
+  onPageChange,
+  onPageSizeChange,
+  search,
+  onSearchChange,
+  statusFilter,
+  onStatusFilterChange,
+  onEdit,
+  onDelete,
+}: InquiryTableProps) {
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
 
-  const filtered = inquiries.filter((inq) => {
-    const q = search.toLowerCase();
-    const matchesSearch =
-      !search ||
-      inq.id.toLowerCase().includes(q) ||
-      inq.name.toLowerCase().includes(q) ||
-      inq.phone.toLowerCase().includes(q) ||
-      inq.email.toLowerCase().includes(q);
-    const matchesStatus = !statusFilter || inq.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
-
-  const totalPages = Math.ceil(filtered.length / itemsPerPage);
-  const paginated = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const totalPages = Math.max(1, Math.ceil(total / itemsPerPage));
+  const safePage = Math.min(currentPage, totalPages);
+  const startIndex = (safePage - 1) * itemsPerPage;
 
   const handleFilterSelect = (val: string) => {
-    setStatusFilter(val === statusFilter ? "" : val);
+    onStatusFilterChange(val === statusFilter ? "" : val);
     setShowStatusDropdown(false);
-    setCurrentPage(1);
   };
 
   return (
@@ -64,7 +76,7 @@ export function InquiryTable({ inquiries, onEdit, onDelete }: InquiryTableProps)
             type="text"
             placeholder="Search by name, phone, email, or ID..."
             value={search}
-            onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
+            onChange={(e) => onSearchChange(e.target.value)}
             className="w-full pl-9 pr-4 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB]"
           />
         </div>
@@ -113,6 +125,18 @@ export function InquiryTable({ inquiries, onEdit, onDelete }: InquiryTableProps)
         </div>
       </div>
 
+      {error && (
+        <div className="flex items-center justify-between gap-4 bg-red-50 border border-red-100 rounded-2xl px-4 py-3">
+          <div className="flex items-center gap-3 text-sm text-[#EF4444]">
+            <AlertTriangle size={16} />
+            <span>{error}</span>
+          </div>
+          <button onClick={onRetry} className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-red-200 rounded-lg text-sm font-medium text-[#EF4444] hover:bg-red-100 transition-colors">
+            <RefreshCw size={14} /> Retry
+          </button>
+        </div>
+      )}
+
       <div className="hidden lg:block bg-white rounded-2xl border border-[#E2E8F0] shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
@@ -124,14 +148,20 @@ export function InquiryTable({ inquiries, onEdit, onDelete }: InquiryTableProps)
               </tr>
             </thead>
             <tbody className="divide-y divide-[#E2E8F0]">
-              {paginated.length === 0 ? (
+              {loading && items.length === 0 ? (
+                <tr>
+                  <td colSpan={9} className="px-6 py-16 text-center">
+                    <div className="w-8 h-8 border-2 border-[#2563EB] border-t-transparent rounded-full animate-spin mx-auto" />
+                  </td>
+                </tr>
+              ) : items.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="px-6 py-16 text-center text-[#64748B] text-sm">
-                    No inquiries yet
+                    {search || statusFilter ? "No inquiries match your filters." : "No inquiries yet"}
                   </td>
                 </tr>
               ) : (
-                paginated.map((inq, i) => (
+                items.map((inq, i) => (
                   <motion.tr
                     key={inq.id}
                     initial={{ opacity: 0, y: 10 }}
@@ -211,25 +241,30 @@ export function InquiryTable({ inquiries, onEdit, onDelete }: InquiryTableProps)
           </table>
         </div>
 
-        {filtered.length > 0 && (
+        {total > 0 && (
           <Pagination
-            currentPage={currentPage}
+            currentPage={safePage}
             totalPages={totalPages}
-            totalItems={filtered.length}
+            totalItems={total}
             itemsPerPage={itemsPerPage}
-            onPageChange={setCurrentPage}
-            onPageSizeChange={(size) => { setItemsPerPage(size); setCurrentPage(1); }}
+            onPageChange={onPageChange}
+            onPageSizeChange={onPageSizeChange}
+            noun="inquiries"
           />
         )}
       </div>
 
       <div className="lg:hidden space-y-3">
-        {paginated.length === 0 ? (
+        {loading && items.length === 0 ? (
+          <div className="bg-white rounded-2xl border border-[#E2E8F0] py-16 flex justify-center">
+            <div className="w-8 h-8 border-2 border-[#2563EB] border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : items.length === 0 ? (
           <div className="bg-white p-8 rounded-2xl border border-[#E2E8F0] text-center">
-            <p className="text-[#64748B] text-sm">No inquiries yet</p>
+            <p className="text-[#64748B] text-sm">{search || statusFilter ? "No inquiries match your filters." : "No inquiries yet"}</p>
           </div>
         ) : (
-          paginated.map((inq, i) => (
+          items.map((inq, i) => (
             <motion.div
               key={inq.id}
               initial={{ opacity: 0, y: 10 }}
@@ -253,7 +288,7 @@ export function InquiryTable({ inquiries, onEdit, onDelete }: InquiryTableProps)
               </div>
 
               <div className="grid grid-cols-2 gap-2 mb-4 text-sm">
-                  <div className="flex items-center gap-1.5 text-[#64748B]">
+                <div className="flex items-center gap-1.5 text-[#64748B]">
                   <Building size={14} />
                   <span>{inq.property_type}</span>
                 </div>
@@ -302,15 +337,30 @@ export function InquiryTable({ inquiries, onEdit, onDelete }: InquiryTableProps)
             </motion.div>
           ))
         )}
-        {filtered.length > 0 && (
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            totalItems={filtered.length}
-            itemsPerPage={itemsPerPage}
-            onPageChange={setCurrentPage}
-            onPageSizeChange={(size) => { setItemsPerPage(size); setCurrentPage(1); }}
-          />
+        {total > 0 && totalPages > 1 && (
+          <div className="flex items-center justify-between px-2 py-3">
+            <p className="text-sm text-[#64748B]">
+              <span className="font-medium text-[#0F172A]">{startIndex + 1}</span> to{" "}
+              <span className="font-medium text-[#0F172A]">{Math.min(startIndex + itemsPerPage, total)}</span> of{" "}
+              <span className="font-medium text-[#0F172A]">{total}</span>
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => onPageChange(safePage - 1)}
+                disabled={safePage === 1}
+                className="px-3 py-1.5 text-sm border border-[#E2E8F0] rounded-lg hover:bg-[#F8FAFC] disabled:opacity-50"
+              >
+                Previous
+              </button>
+              <button
+                onClick={() => onPageChange(safePage + 1)}
+                disabled={safePage === totalPages}
+                className="px-3 py-1.5 text-sm border border-[#E2E8F0] rounded-lg hover:bg-[#F8FAFC] disabled:opacity-50"
+              >
+                Next
+              </button>
+            </div>
+          </div>
         )}
       </div>
     </div>

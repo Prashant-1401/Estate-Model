@@ -12,6 +12,7 @@ interface PaginationProps {
   onPageSizeChange?: (size: number) => void;
   pageSizeOptions?: number[];
   showPageSizeSelector?: boolean;
+  noun?: string;
 }
 
 export function Pagination({
@@ -23,6 +24,7 @@ export function Pagination({
   onPageSizeChange,
   pageSizeOptions = [10, 25, 50],
   showPageSizeSelector = true,
+  noun = "items",
 }: PaginationProps) {
   if (totalPages <= 1) return null;
 
@@ -63,7 +65,7 @@ export function Pagination({
       <div className="text-sm text-[#64748B]">
         Showing <span className="font-medium text-[#0F172A]">{startItem}</span> to{" "}
         <span className="font-medium text-[#0F172A]">{endItem}</span> of{" "}
-        <span className="font-medium text-[#0F172A]">{totalItems}</span> projects
+        <span className="font-medium text-[#0F172A]">{totalItems}</span> {noun}
       </div>
 
       <div className="flex items-center gap-2">

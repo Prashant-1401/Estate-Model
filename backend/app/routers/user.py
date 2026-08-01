@@ -1,10 +1,12 @@
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.models.user import User
 from app.schemas.user import UserCreate, UserRead, UserUpdate, LoginRequest, TokenResponse
+from app.schemas.common import Page
+from app.pagination import paginate
 from app.auth import hash_password, verify_password, create_access_token, get_current_user, require_role
 from app.constants import Role
 
@@ -41,13 +43,25 @@ async def me(current_user: User = Depends(get_current_user)):
     return current_user
 
 
-@router.get("", response_model=list[UserRead])
+@router.get("", response_model=Page[UserRead])
 async def list_users(
+    page: int = Query(1, ge=1),
+    per_page: int = Query(10, ge=1, le=100),
+    search: str = "",
+    status: str = "",
     db: AsyncSession = Depends(get_db),
     _=Depends(require_role(Role.ADMIN, Role.MANAGER)),
 ):
-    result = await db.execute(select(User).order_by(User.created_at.desc()))
-    return result.scalars().all()
+    stmt = select(User).order_by(User.created_at.desc())
+    if search:
+        like = f"%{search}%"
+        stmt = stmt.where(
+            or_(User.name.ilike(like), User.email.ilike(like), User.phone.ilike(like), User.role.ilike(like))
+        )
+    if status:
+        stmt = stmt.where(User.status == status)
+    items, total, pages = await paginate(db, stmt, page, per_page)
+    return Page(items=items, total=total, page=page, per_page=per_page, pages=pages)
 
 
 @router.get("/{user_id}", response_model=UserRead)
