@@ -5,6 +5,7 @@ from pydantic import BaseModel
 class LeadBase(BaseModel):
     name: str
     phone: str
+    email: str = ""
     budget: str = ""
     area: str = ""
     type: str = ""
@@ -23,6 +24,7 @@ class LeadCreate(LeadBase):
 class LeadUpdate(BaseModel):
     name: str | None = None
     phone: str | None = None
+    email: str | None = None
     budget: str | None = None
     area: str | None = None
     type: str | None = None

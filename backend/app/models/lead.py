@@ -9,6 +9,7 @@ class Lead(Base):
     id = Column(String, primary_key=True)
     name = Column(String, nullable=False)
     phone = Column(String, nullable=False)
+    email = Column(String, default="")
     budget = Column(String, default="")
     area = Column(String, default="")
     type = Column(String, default="")

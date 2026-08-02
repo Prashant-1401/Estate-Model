@@ -64,27 +64,12 @@ export interface Property {
   project_id?: string;
 }
 
-export interface Inquiry {
-  id: string;
-  name: string;
-  phone: string;
-  email: string;
-  property_type: string;
-  area: string;
-  budget: string;
-  message: string;
-  source: string;
-  status: "New" | "Contacted" | "Closed";
-  date: string;
-}
-
 export interface DashboardStats {
   total_leads: number;
   today_leads: number;
   hot_leads: number;
   total_properties: number;
   total_projects: number;
-  total_inquiries: number;
   total_users: number;
   revenue_mtd: string;
 }
@@ -97,4 +82,19 @@ export interface AuthUser {
   role: Role;
   status: string;
   initials: string;
+}
+
+export type FollowUpStatus = "Today" | "Tomorrow" | "This Week" | "Decision Pending";
+
+export interface FollowUp {
+  id: string;
+  lead_id: string;
+  lead_name: string;
+  property_title: string;
+  assigned_to: string;
+  status: FollowUpStatus;
+  time: string;
+  note: string;
+  created_at?: string;
+  updated_at?: string;
 }

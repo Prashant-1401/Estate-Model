@@ -1,36 +1,111 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Estate Model — Real Estate CRM
+
+A full-stack real estate CRM. The frontend is a Next.js (App Router) single-page dashboard; the backend is a FastAPI service backed by PostgreSQL.
+
+- **Frontend**: Next.js 16, React 19, Tailwind CSS 4, TypeScript, Framer Motion
+- **Backend**: FastAPI, SQLAlchemy (async), Alembic, PostgreSQL
+- **Deploy**: Render (backend + PostgreSQL/Neon), Vercel (frontend)
+
+## Architecture
+
+The frontend and backend are separate services. The browser only ever talks to the Next.js origin:
+
+```
+Browser ──► Next.js (pages + /api proxy) ──► FastAPI (/api/*) ──► PostgreSQL
+```
+
+- The Next.js catch-all route `src/app/api/[...path]/route.ts` proxies `/api/*` requests to the backend.
+- Auth uses a JWT stored in an httpOnly `estatecrm_token` cookie (set by `/api/auth/login`, read by the proxy, cleared by `/api/auth/logout`). The token never touches `localStorage`.
+- Backend list endpoints return paginated envelopes: `{ items, total, page, per_page, pages }`, and accept `page`, `per_page`, `search`, and (where applicable) `status` query parameters.
 
 ## Getting Started
 
-First, run the development server:
+### Backend
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+cd backend
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env   # fill in DATABASE_URL / DATABASE_URL_SYNC / CORS_ORIGINS / JWT_SECRET
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Apply database migrations and start the API:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+alembic upgrade head
+uvicorn app.main:app --reload --port 8000
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+The API docs are available at http://localhost:8000/docs.
 
-## Learn More
+### Frontend
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+npm install
+npm run dev
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Open http://localhost:3000.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Environment Variables
 
-## Deploy on Vercel
+### Frontend (`.env.local`)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+| Variable | Description | Default |
+| --- | --- | --- |
+| `NEXT_PUBLIC_API_URL` | Public base URL of the backend API (used when `BACKEND_API_URL` is unset) | — |
+| `BACKEND_API_URL` | Server-only backend URL used by the `/api` proxy. Takes precedence over `NEXT_PUBLIC_API_URL`. | — |
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+If neither is set, the proxy falls back to `http://localhost:8000`.
+
+### Backend (`backend/.env`)
+
+| Variable | Description |
+| --- | --- |
+| `DATABASE_URL` | Async (`asyncpg`) PostgreSQL URL, e.g. `postgresql+asyncpg://...` |
+| `DATABASE_URL_SYNC` | Sync (`psycopg2`) URL for Alembic. Optional — if empty, it is derived from `DATABASE_URL`. |
+| `CORS_ORIGINS` | Comma-separated allowed origins (e.g. `http://localhost:3000`) |
+| `JWT_SECRET` | Secret used to sign JWTs. Change in production. |
+
+## Database Migrations
+
+Migrations live in `backend/alembic/versions/`. The backend runs `alembic upgrade head` automatically on startup, so deployments stay in sync.
+
+```bash
+cd backend
+alembic revision --autogenerate -m "description"   # create a new migration
+alembic upgrade head                                # apply pending migrations
+alembic downgrade -1                                # roll back one step
+```
+
+## Scripts
+
+| Command | Description |
+| --- | --- |
+| `npm run dev` | Start the Next.js dev server |
+| `npm run build` | Production build (runs TypeScript checks) |
+| `npm run lint` | Run ESLint |
+| `npm start` | Start the production Next.js server |
+| `alembic upgrade head` | Apply backend migrations |
+| `uvicorn app.main:app` | Start the FastAPI server |
+
+## API Overview
+
+All routes below `/api/*` are proxied through Next.js and can also be hit directly against the backend. Authenticated endpoints require a valid session.
+
+| Method | Path | Description |
+| --- | --- | --- |
+| POST | `/api/auth/login` | Log in, returns user + sets cookie |
+| GET | `/api/auth/me` | Current authenticated user |
+| POST | `/api/auth/logout` | Clears the session cookie |
+| GET | `/api/dashboard/stats` | Dashboard stats (incl. `revenue_mtd`) |
+| GET/POST | `/api/leads`, `/api/properties`, `/api/projects`, `/api/users`, `/api/inquiries` | List (paginated) / create |
+| GET/PUT/DELETE | `/api/{resource}/{id}` | Read / update / delete a record |
+
+`POST /api/leads` is intentionally public so the "Get in touch" form (`/get-in-touch`) can submit leads without authentication.
+
+## Deployment
+
+- **Backend (Render)**: set the `DATABASE_URL` / `DATABASE_URL_SYNC` / `JWT_SECRET` environment variables and push to the repo — the `Procfile` runs `alembic upgrade head && uvicorn app.main:app`.
+- **Frontend (Vercel)**: set `BACKEND_API_URL` (or `NEXT_PUBLIC_API_URL`) to the public backend URL. The cookie is httpOnly and `secure`, so a HTTPS origin is required in production.

@@ -21,15 +21,14 @@ import { AddUserCard } from "@/components/AddUserCard";
 import { EditLeadCard } from "@/components/EditLeadCard";
 import { EditPropertyCard } from "@/components/EditPropertyCard";
 import { EditProjectCard } from "@/components/EditProjectCard";
+import { KanbanBoard } from "@/components/KanbanBoard";
 import { Plus, Building2 as ProjectIcon, Edit2, Trash2, AlertTriangle, RefreshCw } from "lucide-react";
-import type { Property, Project, Lead, UserData, DashboardStats } from "@/lib/types";
-import { InquiryTable } from "@/components/InquiryTable";
+import type { Property, Project, Lead, UserData, DashboardStats, FollowUp } from "@/lib/types";
 import { Pagination } from "@/components/Pagination";
-import type { Inquiry } from "@/lib/types";
 
 const EMPTY_STATS: DashboardStats = {
   total_leads: 0, today_leads: 0, hot_leads: 0, total_properties: 0,
-  total_projects: 0, total_inquiries: 0, total_users: 0, revenue_mtd: "₹0",
+  total_projects: 0, total_users: 0, revenue_mtd: "₹0",
 };
 
 function DashboardContent() {
@@ -54,7 +53,16 @@ function DashboardContent() {
   const properties = usePaginatedData<Property>("/api/properties", { initialPerPage: 9 });
   const projects = usePaginatedData<Project>("/api/projects", { initialPerPage: 10 });
   const users = usePaginatedData<UserData>("/api/users");
-  const inquiries = usePaginatedData<Inquiry>("/api/inquiries");
+  const [followUps, setFollowUps] = useState<FollowUp[]>([]);
+
+  async function loadFollowUps() {
+    try {
+      const res = await api.get<{ items: FollowUp[] }>("/api/follow-ups?per_page=100");
+      setFollowUps(res.items);
+    } catch {
+      // ignore
+    }
+  }
 
   async function reloadStats() {
     try {
@@ -69,11 +77,10 @@ function DashboardContent() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      await reloadStats();
+      await Promise.all([reloadStats(), loadFollowUps()]);
       if (!cancelled) setLoading(false);
     })();
     return () => { cancelled = true; };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleAddLead = async (leadData: Record<string, string>) => {
@@ -170,16 +177,6 @@ function DashboardContent() {
     }
   };
 
-  const handleDeleteInquiry = async (id: string) => {
-    try {
-      await api.delete(`/api/inquiries/${id}`);
-      await Promise.all([inquiries.reload(), reloadStats()]);
-      showToast("Inquiry deleted", "success");
-    } catch (e: unknown) {
-      showToast(e instanceof Error ? e.message : "Failed to delete inquiry", "error");
-    }
-  };
-
   const handleDelete = async (type: string, id: string) => {
     try {
       const endpoint = type === "lead" ? "leads" : type === "property" ? "properties" : type === "project" ? "projects" : null;
@@ -243,25 +240,6 @@ function DashboardContent() {
             onEdit={canManage ? (lead) => setEditingLead(lead) : undefined}
             onDelete={canManage ? (id) => setDeleteConfirm({ type: "lead", id }) : undefined}
             onViewCustomer={(lead) => { setSelectedCustomer(lead); setActiveView("customers"); }}
-          />
-        );
-      case "inquiries":
-        return (
-          <InquiryTable
-            items={inquiries.items}
-            total={inquiries.total}
-            currentPage={inquiries.page}
-            itemsPerPage={inquiries.perPage}
-            loading={inquiries.loading}
-            error={inquiries.error}
-            onRetry={inquiries.reload}
-            onPageChange={inquiries.setPage}
-            onPageSizeChange={inquiries.setPerPage}
-            search={inquiries.search}
-            onSearchChange={inquiries.setSearch}
-            statusFilter={inquiries.status}
-            onStatusFilterChange={inquiries.setStatus}
-            onDelete={canManage ? (id) => handleDeleteInquiry(id) : undefined}
           />
         );
       case "customers":
@@ -487,6 +465,13 @@ function DashboardContent() {
               </div>
             )}
           </div>
+        );
+      case "follow-ups":
+        return (
+          <KanbanBoard
+            items={followUps}
+            onRefresh={loadFollowUps}
+          />
         );
       case "settings":
         return (
