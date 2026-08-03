@@ -12,7 +12,7 @@ async function proxy(request: NextRequest, ctx: ProxyContext) {
   const token = cookieStore.get(TOKEN_COOKIE)?.value;
 
   const base = BACKEND_URL.replace(/\/+$/, "");
-  const pathname = path.length ? `/${path.map(encodeURIComponent).join("/")}` : "";
+  const pathname = path.length ? `/api/${path.map(encodeURIComponent).join("/")}` : "";
   const qs = request.nextUrl.searchParams.toString();
   const url = `${base}${pathname}${qs ? `?${qs}` : ""}`;
 
