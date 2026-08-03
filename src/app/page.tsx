@@ -22,10 +22,7 @@ import { EditLeadCard } from "@/components/EditLeadCard";
 import { EditPropertyCard } from "@/components/EditPropertyCard";
 import { EditProjectCard } from "@/components/EditProjectCard";
 import { KanbanBoard } from "@/components/KanbanBoard";
-import { RolesManager } from "@/components/admin/RolesManager";
-import { PermissionsMatrix } from "@/components/admin/PermissionsMatrix";
 import { ComponentBuilder } from "@/components/admin/ComponentBuilder";
-import { CompanySettings } from "@/components/admin/CompanySettings";
 import { Plus, Building2 as ProjectIcon, Edit2, Trash2, AlertTriangle, RefreshCw } from "lucide-react";
 import type { Property, Project, Lead, UserData, DashboardStats, FollowUp } from "@/lib/types";
 import { Pagination } from "@/components/Pagination";
@@ -52,10 +49,6 @@ function DashboardContent() {
   const [selectedCustomer, setSelectedCustomer] = useState<Lead | null>(null);
   const [stats, setStats] = useState<DashboardStats>(EMPTY_STATS);
   const [statsError, setStatsError] = useState("");
-  const [isRolesOpen, setIsRolesOpen] = useState(false);
-  const [isPermissionsOpen, setIsPermissionsOpen] = useState(false);
-  const [isCompanyOpen, setIsCompanyOpen] = useState(false);
-
   const leads = usePaginatedData<Lead>("/api/leads");
   const properties = usePaginatedData<Property>("/api/properties", { initialPerPage: 9 });
   const projects = usePaginatedData<Project>("/api/projects", { initialPerPage: 10 });
@@ -520,58 +513,8 @@ function DashboardContent() {
             <p className="text-[#64748B] mt-2 max-w-md">Configure your CRM preferences.</p>
           </div>
         );
-      case "roles":
-        return (
-          <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <h1 className="text-2xl font-semibold text-[#0F172A]">Roles & Permissions</h1>
-                <p className="text-[#64748B] mt-1 text-sm">Manage user roles and access control</p>
-              </div>
-              <button
-                onClick={() => setIsRolesOpen(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-[#2563EB] text-white rounded-xl text-sm font-medium hover:bg-[#1D4ED8] shadow-lg shadow-blue-500/20 transition-all"
-              >
-                Manage Roles
-              </button>
-            </div>
-            <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm p-6">
-              <h3 className="text-lg font-medium text-[#0F172A] mb-4">Permission Matrix</h3>
-              <p className="text-sm text-[#64748B] mb-4">Configure what each role can do across modules.</p>
-              <button
-                onClick={() => setIsPermissionsOpen(true)}
-                className="px-4 py-2 bg-[#F8FAFC] border border-[#E2E8F0] text-[#0F172A] rounded-xl text-sm font-medium hover:bg-[#E2E8F0] transition-colors"
-              >
-                View Permission Matrix
-              </button>
-            </div>
-          </div>
-        );
       case "components":
         return <ComponentBuilder />;
-      case "company":
-        return (
-          <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <h1 className="text-2xl font-semibold text-[#0F172A]">Company Settings</h1>
-                <p className="text-[#64748B] mt-1 text-sm">Configure your agency settings</p>
-              </div>
-              <button
-                onClick={() => setIsCompanyOpen(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-[#2563EB] text-white rounded-xl text-sm font-medium hover:bg-[#1D4ED8] shadow-lg shadow-blue-500/20 transition-all"
-              >
-                Edit Settings
-              </button>
-            </div>
-            <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm p-6">
-              <h3 className="text-lg font-medium text-[#0F172A] mb-4">Company Information</h3>
-              <p className="text-sm text-[#64748B] mb-4">
-                Set up your company details, branding, and preferences.
-              </p>
-            </div>
-          </div>
-        );
       case "help":
         return (
           <div className="flex flex-col items-center justify-center h-[60vh] text-center">
@@ -696,21 +639,6 @@ function DashboardContent() {
           </motion.div>
         </div>
       )}
-
-      <RolesManager
-        isOpen={isRolesOpen}
-        onClose={() => setIsRolesOpen(false)}
-      />
-
-      <PermissionsMatrix
-        isOpen={isPermissionsOpen}
-        onClose={() => setIsPermissionsOpen(false)}
-      />
-
-      <CompanySettings
-        isOpen={isCompanyOpen}
-        onClose={() => setIsCompanyOpen(false)}
-      />
     </>
   );
 }

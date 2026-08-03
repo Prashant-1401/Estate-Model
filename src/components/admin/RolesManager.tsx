@@ -11,9 +11,10 @@ import type { RoleConfig } from "@/lib/types";
 interface RolesManagerProps {
   isOpen: boolean;
   onClose: () => void;
+  embedded?: boolean;
 }
 
-export function RolesManager({ isOpen, onClose }: RolesManagerProps) {
+export function RolesManager({ isOpen, onClose, embedded = false }: RolesManagerProps) {
   const { showToast } = useToast();
   const [roles, setRoles] = useState<RoleConfig[]>([]);
   const [loading, setLoading] = useState(true);
@@ -63,7 +64,7 @@ export function RolesManager({ isOpen, onClose }: RolesManagerProps) {
     setIsEditModalOpen(true);
   };
 
-  if (!isOpen) return null;
+  if (!isOpen && !embedded) return null;
 
   return (
     <AnimatePresence>
@@ -71,15 +72,15 @@ export function RolesManager({ isOpen, onClose }: RolesManagerProps) {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-0 sm:p-4"
-        onClick={onClose}
+        className={embedded ? "flex flex-col h-full" : "fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-0 sm:p-4"}
+        onClick={embedded ? undefined : onClose}
       >
         <motion.div
           initial={{ scale: 0.95, opacity: 0, y: 20 }}
           animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.95, opacity: 0, y: 20 }}
           onClick={(e) => e.stopPropagation()}
-          className="bg-white rounded-none sm:rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col"
+          className={embedded ? "bg-white w-full h-full flex flex-col" : "bg-white rounded-none sm:rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col"}
         >
           <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-[#E2E8F0] shrink-0">
             <div className="flex items-center gap-3">
@@ -99,9 +100,11 @@ export function RolesManager({ isOpen, onClose }: RolesManagerProps) {
                 <Plus size={16} />
                 <span className="hidden sm:inline">Add Role</span>
               </button>
-              <button onClick={onClose} className="p-2 hover:bg-[#F8FAFC] rounded-xl transition-colors">
-                <X size={20} className="text-[#64748B]" />
-              </button>
+              {!embedded && (
+                <button onClick={onClose} className="p-2 hover:bg-[#F8FAFC] rounded-xl transition-colors">
+                  <X size={20} className="text-[#64748B]" />
+                </button>
+              )}
             </div>
           </div>
 

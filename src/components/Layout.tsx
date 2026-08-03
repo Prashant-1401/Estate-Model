@@ -28,9 +28,7 @@ const sidebarItems: SidebarItem[] = [
   { icon: CheckSquare, label: "Follow Ups", id: "follow-ups" },
   { icon: Shield, label: "Users", id: "users", roles: ["admin", "manager"] },
   { icon: Settings, label: "Settings", id: "settings", roles: ["admin", "manager"] },
-  { icon: Shield, label: "Roles & Permissions", id: "roles", roles: ["admin"] },
   { icon: LayoutGrid, label: "Component Builder", id: "components", roles: ["admin"] },
-  { icon: Building2, label: "Company Settings", id: "company", roles: ["admin"] },
   { icon: HelpCircle, label: "Help", id: "help" },
 ];
 

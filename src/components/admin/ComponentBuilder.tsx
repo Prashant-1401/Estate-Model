@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, type ComponentType } from "react";
-import { FormInput, GitBranch, Share2, Bell, Zap, FileText, Plus, Edit2, Trash2 } from "lucide-react";
+import { FormInput, GitBranch, Share2, Bell, Zap, Shield, Building2, FileText, Plus, Edit2, Trash2 } from "lucide-react";
 import { api } from "@/lib/api";
 import { useToast } from "@/lib/toast-context";
 import type { FormConfig } from "@/lib/types";
@@ -10,8 +10,11 @@ import { StatusManager } from "@/components/admin/StatusManager";
 import { LeadSourceManager } from "@/components/admin/LeadSourceManager";
 import { NotificationManager } from "@/components/admin/NotificationManager";
 import { WorkflowBuilder } from "@/components/admin/WorkflowBuilder";
+import { RolesManager } from "@/components/admin/RolesManager";
+import { PermissionsMatrix } from "@/components/admin/PermissionsMatrix";
+import { CompanySettings } from "@/components/admin/CompanySettings";
 
-type BuilderTab = "forms" | "statuses" | "lead-sources" | "notifications" | "workflows";
+type BuilderTab = "forms" | "statuses" | "lead-sources" | "notifications" | "workflows" | "roles" | "company";
 type FormEntity = FormConfig["entity_type"];
 
 const TABS: { id: BuilderTab; label: string; icon: ComponentType<{ size?: number; className?: string }> }[] = [
@@ -20,6 +23,8 @@ const TABS: { id: BuilderTab; label: string; icon: ComponentType<{ size?: number
   { id: "lead-sources", label: "Lead Sources", icon: Share2 },
   { id: "notifications", label: "Notifications", icon: Bell },
   { id: "workflows", label: "Workflows", icon: Zap },
+  { id: "roles", label: "Roles & Permissions", icon: Shield },
+  { id: "company", label: "Company", icon: Building2 },
 ];
 
 const ENTITIES: FormEntity[] = ["lead", "property", "project"];
@@ -84,7 +89,7 @@ export function ComponentBuilder() {
       <div>
         <h1 className="text-2xl font-semibold text-[#0F172A]">Component Builder</h1>
         <p className="text-[#64748B] mt-1 text-sm">
-          Configure forms, statuses, lead sources, notifications, and workflows
+          Configure forms, statuses, lead sources, notifications, workflows, roles &amp; permissions, and company settings
         </p>
       </div>
 
@@ -218,6 +223,20 @@ export function ComponentBuilder() {
           {activeTab === "workflows" && (
             <div className="h-[calc(100vh-18rem)] min-h-[440px]">
               <WorkflowBuilder isOpen embedded onClose={() => {}} />
+            </div>
+          )}
+
+          {activeTab === "roles" && (
+            <div className="h-[calc(100vh-12rem)] min-h-[520px] overflow-y-auto space-y-6">
+              <RolesManager isOpen embedded onClose={() => {}} />
+              <div className="border-t border-[#E2E8F0]" />
+              <PermissionsMatrix isOpen embedded onClose={() => {}} />
+            </div>
+          )}
+
+          {activeTab === "company" && (
+            <div className="h-[calc(100vh-12rem)] min-h-[440px]">
+              <CompanySettings isOpen embedded onClose={() => {}} />
             </div>
           )}
         </div>
