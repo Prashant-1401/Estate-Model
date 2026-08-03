@@ -23,8 +23,8 @@ export function RolesManager({ isOpen, onClose }: RolesManagerProps) {
   const loadRoles = async () => {
     try {
       setLoading(true);
-      const res = await api.get<{ items: RoleConfig[] }>("/api/roles/all");
-      setRoles(res.items || []);
+      const res = await api.get<RoleConfig[] | { items: RoleConfig[] }>("/api/roles/all");
+      setRoles(Array.isArray(res) ? res : res.items || []);
     } catch (e) {
       showToast(e instanceof Error ? e.message : "Failed to load roles", "error");
     } finally {

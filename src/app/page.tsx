@@ -169,6 +169,7 @@ function DashboardContent() {
         type: data.propertyType,
         source: data.source,
         status: data.status,
+        requirement: data.notes,
       });
       await leads.reload();
       showToast("Lead updated successfully", "success");

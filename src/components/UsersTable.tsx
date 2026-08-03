@@ -35,10 +35,10 @@ interface UsersTableProps {
 }
 
 const roleColors: Record<string, string> = {
-  Administrator: "bg-purple-50 text-purple-600 border border-purple-100",
-  Agent: "bg-blue-50 text-[#2563EB] border border-blue-100",
-  Manager: "bg-amber-50 text-[#F59E0B] border border-amber-100",
-  Viewer: "bg-slate-50 text-[#64748B] border border-slate-100",
+  admin: "bg-purple-50 text-purple-600 border border-purple-100",
+  agent: "bg-blue-50 text-[#2563EB] border border-blue-100",
+  manager: "bg-amber-50 text-[#F59E0B] border border-amber-100",
+  viewer: "bg-slate-50 text-[#64748B] border border-slate-100",
 };
 
 export function UsersTable({

@@ -30,10 +30,10 @@ export function PermissionsMatrix({ isOpen, onClose }: PermissionsMatrixProps) {
       setLoading(true);
       const [matrixRes, rolesRes] = await Promise.all([
         api.get<PermissionMatrix>("/api/permissions/matrix"),
-        api.get<{ items: RoleConfig[] }>("/api/roles/all"),
+        api.get<RoleConfig[] | { items: RoleConfig[] }>("/api/roles/all"),
       ]);
       setMatrix(matrixRes);
-      setRoles(rolesRes.items || []);
+      setRoles(Array.isArray(rolesRes) ? rolesRes : rolesRes.items || []);
     } catch (e) {
       showToast(e instanceof Error ? e.message : "Failed to load data", "error");
     } finally {

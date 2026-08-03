@@ -21,7 +21,7 @@ export function EditLeadCard({ isOpen, onClose, onSubmit, lead }: EditLeadCardPr
     area: lead?.area || "",
     propertyType: lead?.type || "",
     source: lead?.source || "",
-    notes: "",
+    notes: lead?.requirement || "",
     status: (lead?.status || "New") as string,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -168,6 +168,14 @@ export function EditLeadCard({ isOpen, onClose, onSubmit, lead }: EditLeadCardPr
                   </select>
                 </div>
               </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-[#0F172A]">Notes / Requirements</label>
+              <textarea value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                rows={3}
+                className="w-full px-4 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition-all resize-none"
+                placeholder="Any specific requirements..." />
             </div>
 
             <div className="flex gap-3 pt-2">

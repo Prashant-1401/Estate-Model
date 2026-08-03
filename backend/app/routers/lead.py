@@ -51,6 +51,7 @@ async def get_lead(
 async def create_lead(
     data: LeadCreate,
     db: AsyncSession = Depends(get_db),
+    _=Depends(require_role(Role.ADMIN, Role.MANAGER, Role.AGENT)),
 ):
     lead_id = f"LD-{__import__('time').time():.6f}".replace(".", "").upper()[:12]
     lead = Lead(id=lead_id, **data.model_dump())

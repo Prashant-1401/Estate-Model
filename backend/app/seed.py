@@ -42,7 +42,7 @@ DEFAULT_ROLES = [
 DEFAULT_ACTIONS = ["view", "create", "edit", "delete", "export"]
 
 DEFAULT_LEAD_STATUSES = [
-    {"name": "New Lead", "slug": "new", "color": "#3B82F6", "sort_order": 0},
+    {"name": "New", "slug": "new", "color": "#3B82F6", "sort_order": 0},
     {"name": "Assigned", "slug": "assigned", "color": "#8B5CF6", "sort_order": 1},
     {"name": "Contacted", "slug": "contacted", "color": "#06B6D4", "sort_order": 2},
     {"name": "Interested", "slug": "interested", "color": "#10B981", "sort_order": 3},
@@ -53,6 +53,9 @@ DEFAULT_LEAD_STATUSES = [
     {"name": "Registration", "slug": "registration", "color": "#14B8A6", "sort_order": 8},
     {"name": "Completed", "slug": "completed", "color": "#059669", "sort_order": 9},
     {"name": "Rejected", "slug": "rejected", "color": "#DC2626", "sort_order": 10},
+    {"name": "Hot", "slug": "hot", "color": "#EF4444", "sort_order": 11},
+    {"name": "Warm", "slug": "warm", "color": "#F59E0B", "sort_order": 12},
+    {"name": "Cold", "slug": "cold", "color": "#94A3B8", "sort_order": 13},
 ]
 
 DEFAULT_LEAD_SOURCES = [
@@ -182,7 +185,10 @@ async def seed_statuses(db):
         result = await db.execute(
             select(Status).where(Status.entity_type == "lead", Status.slug == status_data["slug"])
         )
-        if result.scalar_one_or_none():
+        existing = result.scalar_one_or_none()
+        if existing:
+            for key, value in status_data.items():
+                setattr(existing, key, value)
             continue
         status_id = f"STS-{int(time.time() * 1000)}-{status_data['slug'][:4].upper()}"
         status = Status(id=status_id, entity_type="lead", **status_data)

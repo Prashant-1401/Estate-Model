@@ -155,24 +155,27 @@ export function ConfigurableDashboard({ stats, onAddLead }: ConfigurableDashboar
     try {
       setLoading(true);
       const [widgetsRes, dashboardRes, leadsRes, followUpsRes] = await Promise.allSettled([
-        api.get<{ items: DashboardWidget[] }>("/api/dashboard-config/widgets/all"),
+        api.get<DashboardWidget[] | { items: DashboardWidget[] }>("/api/dashboard-config/widgets/all"),
         api.get<UserDashboard>("/api/dashboard-config/my-dashboard"),
         api.get<{ items: Lead[] }>("/api/leads?per_page=10"),
         api.get<{ items: FollowUp[] }>("/api/follow-ups?per_page=10"),
       ]);
 
-      if (widgetsRes.status === "fulfilled") setWidgets(widgetsRes.value.items || []);
+      if (widgetsRes.status === "fulfilled") {
+        const value = widgetsRes.value;
+        setWidgets(Array.isArray(value) ? value : value.items || []);
+      }
       if (dashboardRes.status === "fulfilled") setUserDashboard(dashboardRes.value);
       if (leadsRes.status === "fulfilled") setLeads(leadsRes.value.items || []);
       if (followUpsRes.status === "fulfilled") setFollowUps(followUpsRes.value.items || []);
-    } catch (e) {
+    } catch {
       showToast("Failed to load dashboard", "error");
     } finally {
       setLoading(false);
     }
   };
 
-  const statWidgets = [
+  const DEFAULT_STAT_WIDGETS = [
     { title: "Total Leads", value: stats.total_leads, icon: "Users", color: "#3B82F6" },
     { title: "Today's Leads", value: stats.today_leads, icon: "Calendar", color: "#10B981" },
     { title: "Hot Leads", value: stats.hot_leads, icon: "Flame", color: "#EF4444" },
@@ -180,6 +183,27 @@ export function ConfigurableDashboard({ stats, onAddLead }: ConfigurableDashboar
     { title: "Total Projects", value: stats.total_projects, icon: "FolderTree", color: "#F59E0B" },
     { title: "Total Users", value: stats.total_users, icon: "Users", color: "#06B6D4" },
   ];
+
+  const STAT_VALUES: Record<string, string | number> = {
+    "Total Leads": stats.total_leads,
+    "Today's Leads": stats.today_leads,
+    "Hot Leads": stats.hot_leads,
+    "Total Properties": stats.total_properties,
+    "Total Projects": stats.total_projects,
+    "Total Users": stats.total_users,
+    "Revenue MTD": stats.revenue_mtd,
+  };
+
+  const statWidgets = widgets
+    .filter((w) => w.is_active && w.widget_type === "stat")
+    .map((w) => ({
+      title: w.name,
+      value: STAT_VALUES[w.name] ?? 0,
+      icon: w.config?.icon || "Users",
+      color: w.config?.color || "#3B82F6",
+    }));
+  const tableEnabled = widgets.find((w) => w.widget_type === "table")?.is_active ?? true;
+  const listEnabled = widgets.find((w) => w.widget_type === "list")?.is_active ?? true;
 
   if (loading) {
     return (
@@ -207,7 +231,7 @@ export function ConfigurableDashboard({ stats, onAddLead }: ConfigurableDashboar
 
       {/* Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {statWidgets.map((widget, i) => (
+        {(statWidgets.length > 0 ? statWidgets : DEFAULT_STAT_WIDGETS).map((widget, i) => (
           <StatWidget key={i} {...widget} />
         ))}
       </div>
@@ -231,44 +255,48 @@ export function ConfigurableDashboard({ stats, onAddLead }: ConfigurableDashboar
 
       {/* Recent Leads & Follow-ups */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <TableWidget
-          title="Recent Leads"
-          columns={["Name", "Phone", "Status", "Source"]}
-          data={leads}
-          renderRow={(lead: Lead, i: number) => (
-            <motion.tr
-              key={lead.id}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: i * 0.05 }}
-              className="hover:bg-[#F8FAFC] transition-colors"
-            >
-              <td className="px-6 py-4 text-sm font-medium text-[#0F172A]">{lead.name}</td>
-              <td className="px-6 py-4 text-sm text-[#64748B]">{lead.phone}</td>
-              <td className="px-6 py-4">
-                <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
-                  lead.status === "Hot" ? "bg-red-50 text-red-600 border border-red-100" :
-                  lead.status === "Warm" ? "bg-amber-50 text-amber-600 border border-amber-100" :
-                  lead.status === "Cold" ? "bg-slate-50 text-slate-600 border border-slate-100" :
-                  "bg-blue-50 text-blue-600 border border-blue-100"
-                }`}>
-                  {lead.status}
-                </span>
-              </td>
-              <td className="px-6 py-4 text-sm text-[#64748B]">{lead.source}</td>
-            </motion.tr>
-          )}
-        />
+        {tableEnabled && (
+          <TableWidget
+            title="Recent Leads"
+            columns={["Name", "Phone", "Status", "Source"]}
+            data={leads}
+            renderRow={(lead: Lead, i: number) => (
+              <motion.tr
+                key={lead.id}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: i * 0.05 }}
+                className="hover:bg-[#F8FAFC] transition-colors"
+              >
+                <td className="px-6 py-4 text-sm font-medium text-[#0F172A]">{lead.name}</td>
+                <td className="px-6 py-4 text-sm text-[#64748B]">{lead.phone}</td>
+                <td className="px-6 py-4">
+                  <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
+                    lead.status === "Hot" ? "bg-red-50 text-red-600 border border-red-100" :
+                    lead.status === "Warm" ? "bg-amber-50 text-amber-600 border border-amber-100" :
+                    lead.status === "Cold" ? "bg-slate-50 text-slate-600 border border-slate-100" :
+                    "bg-blue-50 text-blue-600 border border-blue-100"
+                  }`}>
+                    {lead.status}
+                  </span>
+                </td>
+                <td className="px-6 py-4 text-sm text-[#64748B]">{lead.source}</td>
+              </motion.tr>
+            )}
+          />
+        )}
 
-        <ListWidget
-          title="Upcoming Follow-ups"
-          items={followUps.map((fu) => ({
-            id: fu.id,
-            title: fu.lead_name,
-            subtitle: `${fu.time} - ${fu.property_title || "No property"}`,
-            status: fu.status,
-          }))}
-        />
+        {listEnabled && (
+          <ListWidget
+            title="Upcoming Follow-ups"
+            items={followUps.map((fu) => ({
+              id: fu.id,
+              title: fu.lead_name,
+              subtitle: `${fu.time} - ${fu.property_title || "No property"}`,
+              status: fu.status,
+            }))}
+          />
+        )}
       </div>
 
       {/* Quick Stats */}
