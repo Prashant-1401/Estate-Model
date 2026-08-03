@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.database import engine
 from app.routers import lead, property, project, user, dashboard, follow_up
+from app.routers import module, role, form, company, workflow, notification, config, dashboard_config
 from app.seed import seed_users
 
 BACKEND_DIR = Path(__file__).resolve().parent.parent
@@ -45,6 +46,15 @@ app.include_router(project.router)
 app.include_router(user.router)
 app.include_router(dashboard.router)
 app.include_router(follow_up.router)
+app.include_router(module.router)
+app.include_router(role.router)
+app.include_router(role.permission_router)
+app.include_router(form.router)
+app.include_router(company.router)
+app.include_router(workflow.router)
+app.include_router(notification.router)
+app.include_router(config.router)
+app.include_router(dashboard_config.router)
 
 
 @app.get("/")

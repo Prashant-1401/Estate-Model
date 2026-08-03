@@ -166,11 +166,11 @@ export default function AddLeadPage() {
                   className="w-full pl-10 pr-4 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition-all appearance-none"
                 >
                   <option value="">Select Budget</option>
-                  <option value="50l-80l">₹50L - ₹80L</option>
-                  <option value="80l-1cr">₹80L - ₹1Cr</option>
-                  <option value="1cr-1.5cr">₹1Cr - ₹1.5Cr</option>
-                  <option value="1.5cr-2cr">₹1.5Cr - ₹2Cr</option>
-                  <option value="2cr+">₹2Cr+</option>
+                  <option value="₹50L - ₹80L">₹50L - ₹80L</option>
+                  <option value="₹80L - ₹1Cr">₹80L - ₹1Cr</option>
+                  <option value="₹1Cr - ₹1.5Cr">₹1Cr - ₹1.5Cr</option>
+                  <option value="₹1.5Cr - ₹2Cr">₹1.5Cr - ₹2Cr</option>
+                  <option value="₹2Cr+">₹2Cr+</option>
                 </select>
               </div>
             </div>
@@ -184,11 +184,11 @@ export default function AddLeadPage() {
                   className="w-full pl-10 pr-4 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition-all appearance-none"
                 >
                   <option value="">Select Area</option>
-                  <option value="palm-jumeirah">Palm Jumeirah</option>
-                  <option value="downtown">Downtown Dubai</option>
-                  <option value="emirates-hills">Emirates Hills</option>
-                  <option value="dubai-marina">Dubai Marina</option>
-                  <option value="business-bay">Business Bay</option>
+                  <option value="Palm Jumeirah">Palm Jumeirah</option>
+                  <option value="Downtown Dubai">Downtown Dubai</option>
+                  <option value="Emirates Hills">Emirates Hills</option>
+                  <option value="Dubai Marina">Dubai Marina</option>
+                  <option value="Business Bay">Business Bay</option>
                 </select>
               </div>
             </div>

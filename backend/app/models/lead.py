@@ -17,6 +17,7 @@ class Lead(Base):
     status = Column(String, default="New")
     assigned = Column(String, default="Unassigned")
     date = Column(String, default="")
+    requirement = Column(String, default="")
     property_id = Column(String, nullable=True)
     assigned_to = Column(String, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())

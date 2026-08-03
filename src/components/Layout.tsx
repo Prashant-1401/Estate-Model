@@ -6,7 +6,8 @@ import { useRouter } from "next/navigation";
 import { 
   LayoutDashboard, Users, Building2, Settings, 
   HelpCircle, Search, Bell, ChevronDown, Menu, Plus,
-  FileText, X, LogOut, FolderTree, Shield, CheckSquare
+  FileText, X, LogOut, FolderTree, Shield, CheckSquare, FormInput,
+  GitBranch, Share2, Zap
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
@@ -28,6 +29,13 @@ const sidebarItems: SidebarItem[] = [
   { icon: CheckSquare, label: "Follow Ups", id: "follow-ups" },
   { icon: Shield, label: "Users", id: "users", roles: ["admin", "manager"] },
   { icon: Settings, label: "Settings", id: "settings", roles: ["admin", "manager"] },
+  { icon: Shield, label: "Roles & Permissions", id: "roles", roles: ["admin"] },
+  { icon: FormInput, label: "Form Builder", id: "forms", roles: ["admin"] },
+  { icon: GitBranch, label: "Statuses", id: "statuses", roles: ["admin"] },
+  { icon: Share2, label: "Lead Sources", id: "lead-sources", roles: ["admin"] },
+  { icon: Zap, label: "Notifications", id: "notifications", roles: ["admin"] },
+  { icon: GitBranch, label: "Workflows", id: "workflows", roles: ["admin"] },
+  { icon: Building2, label: "Company Settings", id: "company", roles: ["admin"] },
   { icon: HelpCircle, label: "Help", id: "help" },
 ];
 

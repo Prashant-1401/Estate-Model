@@ -8,7 +8,7 @@ import { api } from "@/lib/api";
 import { useToast } from "@/lib/toast-context";
 import { usePaginatedData } from "@/lib/use-paginated-data";
 import { DashboardLayout } from "@/components/Layout";
-import { DashboardView } from "@/components/DashboardView";
+import { ConfigurableDashboard } from "@/components/dashboard/ConfigurableDashboard";
 import { LeadsTable } from "@/components/LeadsTable";
 import { CustomerProfile } from "@/components/CustomerProfile";
 import { AddLeadCard } from "@/components/AddLeadCard";
@@ -22,6 +22,14 @@ import { EditLeadCard } from "@/components/EditLeadCard";
 import { EditPropertyCard } from "@/components/EditPropertyCard";
 import { EditProjectCard } from "@/components/EditProjectCard";
 import { KanbanBoard } from "@/components/KanbanBoard";
+import { RolesManager } from "@/components/admin/RolesManager";
+import { PermissionsMatrix } from "@/components/admin/PermissionsMatrix";
+import { FormBuilder } from "@/components/admin/FormBuilder";
+import { StatusManager } from "@/components/admin/StatusManager";
+import { LeadSourceManager } from "@/components/admin/LeadSourceManager";
+import { NotificationManager } from "@/components/admin/NotificationManager";
+import { WorkflowBuilder } from "@/components/admin/WorkflowBuilder";
+import { CompanySettings } from "@/components/admin/CompanySettings";
 import { Plus, Building2 as ProjectIcon, Edit2, Trash2, AlertTriangle, RefreshCw } from "lucide-react";
 import type { Property, Project, Lead, UserData, DashboardStats, FollowUp } from "@/lib/types";
 import { Pagination } from "@/components/Pagination";
@@ -48,6 +56,14 @@ function DashboardContent() {
   const [selectedCustomer, setSelectedCustomer] = useState<Lead | null>(null);
   const [stats, setStats] = useState<DashboardStats>(EMPTY_STATS);
   const [statsError, setStatsError] = useState("");
+  const [isRolesOpen, setIsRolesOpen] = useState(false);
+  const [isPermissionsOpen, setIsPermissionsOpen] = useState(false);
+  const [isFormBuilderOpen, setIsFormBuilderOpen] = useState(false);
+  const [isCompanyOpen, setIsCompanyOpen] = useState(false);
+  const [isStatusesOpen, setIsStatusesOpen] = useState(false);
+  const [isLeadSourcesOpen, setIsLeadSourcesOpen] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [isWorkflowsOpen, setIsWorkflowsOpen] = useState(false);
 
   const leads = usePaginatedData<Lead>("/api/leads");
   const properties = usePaginatedData<Property>("/api/properties", { initialPerPage: 9 });
@@ -88,18 +104,21 @@ function DashboardContent() {
       await api.post("/api/leads", {
         name: leadData.name,
         phone: leadData.phone,
+        email: leadData.email,
         budget: leadData.budget,
         area: leadData.area,
         type: leadData.propertyType,
         source: leadData.source || "Direct",
         status: "New",
         assigned: "Unassigned",
+        requirement: leadData.notes || "",
         date: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
       });
       await Promise.all([leads.reload(), reloadStats()]);
       showToast("Lead created successfully", "success");
     } catch (e: unknown) {
       showToast(e instanceof Error ? e.message : "Failed to create lead", "error");
+      throw e;
     }
   };
 
@@ -144,6 +163,7 @@ function DashboardContent() {
       await api.put(`/api/leads/${id}`, {
         name: data.name,
         phone: data.phone,
+        email: data.email,
         budget: data.budget,
         area: data.area,
         type: data.propertyType,
@@ -154,6 +174,7 @@ function DashboardContent() {
       showToast("Lead updated successfully", "success");
     } catch (e: unknown) {
       showToast(e instanceof Error ? e.message : "Failed to update lead", "error");
+      throw e;
     }
   };
 
@@ -219,7 +240,7 @@ function DashboardContent() {
   const renderView = () => {
     switch (activeView) {
       case "dashboard":
-        return <DashboardView onAddLead={() => setIsAddLeadOpen(true)} stats={stats} />;
+        return <ConfigurableDashboard onAddLead={() => setIsAddLeadOpen(true)} stats={stats} />;
       case "leads":
         return (
           <LeadsTable
@@ -483,6 +504,174 @@ function DashboardContent() {
             <p className="text-[#64748B] mt-2 max-w-md">Configure your CRM preferences.</p>
           </div>
         );
+      case "roles":
+        return (
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h1 className="text-2xl font-semibold text-[#0F172A]">Roles & Permissions</h1>
+                <p className="text-[#64748B] mt-1 text-sm">Manage user roles and access control</p>
+              </div>
+              <button
+                onClick={() => setIsRolesOpen(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-[#2563EB] text-white rounded-xl text-sm font-medium hover:bg-[#1D4ED8] shadow-lg shadow-blue-500/20 transition-all"
+              >
+                Manage Roles
+              </button>
+            </div>
+            <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm p-6">
+              <h3 className="text-lg font-medium text-[#0F172A] mb-4">Permission Matrix</h3>
+              <p className="text-sm text-[#64748B] mb-4">Configure what each role can do across modules.</p>
+              <button
+                onClick={() => setIsPermissionsOpen(true)}
+                className="px-4 py-2 bg-[#F8FAFC] border border-[#E2E8F0] text-[#0F172A] rounded-xl text-sm font-medium hover:bg-[#E2E8F0] transition-colors"
+              >
+                View Permission Matrix
+              </button>
+            </div>
+          </div>
+        );
+      case "forms":
+        return (
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h1 className="text-2xl font-semibold text-[#0F172A]">Form Builder</h1>
+                <p className="text-[#64748B] mt-1 text-sm">Create and manage dynamic forms for leads, properties, and projects</p>
+              </div>
+              <button
+                onClick={() => setIsFormBuilderOpen(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-[#2563EB] text-white rounded-xl text-sm font-medium hover:bg-[#1D4ED8] shadow-lg shadow-blue-500/20 transition-all"
+              >
+                <Plus size={18} />
+                Create Form
+              </button>
+            </div>
+            <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm p-6">
+              <h3 className="text-lg font-medium text-[#0F172A] mb-4">Dynamic Forms</h3>
+              <p className="text-sm text-[#64748B] mb-4">
+                Build custom forms for your CRM. Forms can include text fields, dropdowns, file uploads, and more.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {["lead", "property", "project"].map((type) => (
+                  <button
+                    key={type}
+                    onClick={() => {
+                      setIsFormBuilderOpen(true);
+                    }}
+                    className="p-4 border border-[#E2E8F0] rounded-xl hover:border-[#2563EB]/30 transition-colors text-left"
+                  >
+                    <h4 className="font-medium text-[#0F172A] capitalize">{type} Form</h4>
+                    <p className="text-xs text-[#64748B] mt-1">Configure fields for {type} creation</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+      case "statuses":
+        return (
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h1 className="text-2xl font-semibold text-[#0F172A]">Status Management</h1>
+                <p className="text-[#64748B] mt-1 text-sm">Configure pipeline stages for leads, properties, and projects</p>
+              </div>
+              <button
+                onClick={() => setIsStatusesOpen(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-[#2563EB] text-white rounded-xl text-sm font-medium hover:bg-[#1D4ED8] shadow-lg shadow-blue-500/20 transition-all"
+              >
+                Manage Statuses
+              </button>
+            </div>
+            <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm p-6">
+              <p className="text-sm text-[#64748B]">Define the stages that items progress through in your pipeline.</p>
+            </div>
+          </div>
+        );
+      case "lead-sources":
+        return (
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h1 className="text-2xl font-semibold text-[#0F172A]">Lead Sources</h1>
+                <p className="text-[#64748B] mt-1 text-sm">Configure where your leads come from</p>
+              </div>
+              <button
+                onClick={() => setIsLeadSourcesOpen(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-[#2563EB] text-white rounded-xl text-sm font-medium hover:bg-[#1D4ED8] shadow-lg shadow-blue-500/20 transition-all"
+              >
+                Manage Sources
+              </button>
+            </div>
+            <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm p-6">
+              <p className="text-sm text-[#64748B]">Track and manage the channels through which leads arrive.</p>
+            </div>
+          </div>
+        );
+      case "notifications":
+        return (
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h1 className="text-2xl font-semibold text-[#0F172A]">Notification Templates</h1>
+                <p className="text-[#64748B] mt-1 text-sm">Create templates and automation rules for notifications</p>
+              </div>
+              <button
+                onClick={() => setIsNotificationsOpen(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-[#2563EB] text-white rounded-xl text-sm font-medium hover:bg-[#1D4ED8] shadow-lg shadow-blue-500/20 transition-all"
+              >
+                Manage Notifications
+              </button>
+            </div>
+            <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm p-6">
+              <p className="text-sm text-[#64748B]">Define email, SMS, and push notification templates with variables.</p>
+            </div>
+          </div>
+        );
+      case "workflows":
+        return (
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h1 className="text-2xl font-semibold text-[#0F172A]">Workflow Automation</h1>
+                <p className="text-[#64748B] mt-1 text-sm">Automate lead pipeline actions with multi-step workflows</p>
+              </div>
+              <button
+                onClick={() => setIsWorkflowsOpen(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-[#2563EB] text-white rounded-xl text-sm font-medium hover:bg-[#1D4ED8] shadow-lg shadow-blue-500/20 transition-all"
+              >
+                Manage Workflows
+              </button>
+            </div>
+            <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm p-6">
+              <p className="text-sm text-[#64748B]">Create automated sequences triggered by lead events.</p>
+            </div>
+          </div>
+        );
+      case "company":
+        return (
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h1 className="text-2xl font-semibold text-[#0F172A]">Company Settings</h1>
+                <p className="text-[#64748B] mt-1 text-sm">Configure your agency settings</p>
+              </div>
+              <button
+                onClick={() => setIsCompanyOpen(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-[#2563EB] text-white rounded-xl text-sm font-medium hover:bg-[#1D4ED8] shadow-lg shadow-blue-500/20 transition-all"
+              >
+                Edit Settings
+              </button>
+            </div>
+            <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm p-6">
+              <h3 className="text-lg font-medium text-[#0F172A] mb-4">Company Information</h3>
+              <p className="text-sm text-[#64748B] mb-4">
+                Set up your company details, branding, and preferences.
+              </p>
+            </div>
+          </div>
+        );
       case "help":
         return (
           <div className="flex flex-col items-center justify-center h-[60vh] text-center">
@@ -494,7 +683,7 @@ function DashboardContent() {
           </div>
         );
       default:
-        return <DashboardView onAddLead={() => setIsAddLeadOpen(true)} stats={stats} />;
+        return <ConfigurableDashboard onAddLead={() => setIsAddLeadOpen(true)} stats={stats} />;
     }
   };
 
@@ -602,6 +791,46 @@ function DashboardContent() {
           </motion.div>
         </div>
       )}
+
+      <RolesManager
+        isOpen={isRolesOpen}
+        onClose={() => setIsRolesOpen(false)}
+      />
+
+      <PermissionsMatrix
+        isOpen={isPermissionsOpen}
+        onClose={() => setIsPermissionsOpen(false)}
+      />
+
+      <FormBuilder
+        isOpen={isFormBuilderOpen}
+        onClose={() => setIsFormBuilderOpen(false)}
+      />
+
+      <StatusManager
+        isOpen={isStatusesOpen}
+        onClose={() => setIsStatusesOpen(false)}
+      />
+
+      <LeadSourceManager
+        isOpen={isLeadSourcesOpen}
+        onClose={() => setIsLeadSourcesOpen(false)}
+      />
+
+      <NotificationManager
+        isOpen={isNotificationsOpen}
+        onClose={() => setIsNotificationsOpen(false)}
+      />
+
+      <WorkflowBuilder
+        isOpen={isWorkflowsOpen}
+        onClose={() => setIsWorkflowsOpen(false)}
+      />
+
+      <CompanySettings
+        isOpen={isCompanyOpen}
+        onClose={() => setIsCompanyOpen(false)}
+      />
     </>
   );
 }

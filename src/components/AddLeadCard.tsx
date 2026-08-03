@@ -8,7 +8,7 @@ import { useToast } from "@/lib/toast-context";
 interface AddLeadCardProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (leadData: Record<string, string>) => void;
+  onSubmit: (leadData: Record<string, string>) => Promise<void>;
 }
 
 export function AddLeadCard({ isOpen, onClose, onSubmit }: AddLeadCardProps) {
@@ -26,6 +26,7 @@ export function AddLeadCard({ isOpen, onClose, onSubmit }: AddLeadCardProps) {
   });
 
   const [errors, setErrors] = useState<{ name?: string; phone?: string; budget?: string }>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const validate = () => {
     const newErrors: { name?: string; phone?: string; budget?: string } = {};
@@ -52,7 +53,7 @@ export function AddLeadCard({ isOpen, onClose, onSubmit }: AddLeadCardProps) {
     return newErrors;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const validationErrors = validate();
     setErrors(validationErrors);
@@ -64,19 +65,26 @@ export function AddLeadCard({ isOpen, onClose, onSubmit }: AddLeadCardProps) {
       return;
     }
 
-    onSubmit(formData);
-    onClose();
-    setFormData({
-      name: "",
-      phone: "",
-      email: "",
-      budget: "",
-      area: "",
-      propertyType: "",
-      source: "",
-      notes: "",
-    });
-    setErrors({});
+    setIsSubmitting(true);
+    try {
+      await onSubmit(formData);
+      onClose();
+      setFormData({
+        name: "",
+        phone: "",
+        email: "",
+        budget: "",
+        area: "",
+        propertyType: "",
+        source: "",
+        notes: "",
+      });
+      setErrors({});
+    } catch {
+      // Error is already shown by parent via showToast
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -184,11 +192,11 @@ export function AddLeadCard({ isOpen, onClose, onSubmit }: AddLeadCardProps) {
                     className="w-full pl-10 pr-4 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition-all appearance-none"
                   >
                     <option value="">Select Budget</option>
-                    <option value="50l-80l">₹50L - ₹80L</option>
-                    <option value="80l-1cr">₹80L - ₹1Cr</option>
-                    <option value="1cr-1.5cr">₹1Cr - ₹1.5Cr</option>
-                    <option value="1.5cr-2cr">₹1.5Cr - ₹2Cr</option>
-                    <option value="2cr+">₹2Cr+</option>
+                    <option value="₹50L - ₹80L">₹50L - ₹80L</option>
+                    <option value="₹80L - ₹1Cr">₹80L - ₹1Cr</option>
+                    <option value="₹1Cr - ₹1.5Cr">₹1Cr - ₹1.5Cr</option>
+                    <option value="₹1.5Cr - ₹2Cr">₹1.5Cr - ₹2Cr</option>
+                    <option value="₹2Cr+">₹2Cr+</option>
                   </select>
                 </div>
                 {errors.budget && <p className="text-xs text-red-500 mt-1">{errors.budget}</p>}
@@ -206,11 +214,11 @@ export function AddLeadCard({ isOpen, onClose, onSubmit }: AddLeadCardProps) {
                     className="w-full pl-10 pr-4 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition-all appearance-none"
                   >
                     <option value="">Select Area</option>
-                    <option value="palm-jumeirah">Palm Jumeirah</option>
-                    <option value="downtown">Downtown Dubai</option>
-                    <option value="emirates-hills">Emirates Hills</option>
-                    <option value="dubai-marina">Dubai Marina</option>
-                    <option value="business-bay">Business Bay</option>
+                    <option value="Palm Jumeirah">Palm Jumeirah</option>
+                    <option value="Downtown Dubai">Downtown Dubai</option>
+                    <option value="Emirates Hills">Emirates Hills</option>
+                    <option value="Dubai Marina">Dubai Marina</option>
+                    <option value="Business Bay">Business Bay</option>
                   </select>
                 </div>
               </div>
@@ -279,10 +287,15 @@ export function AddLeadCard({ isOpen, onClose, onSubmit }: AddLeadCardProps) {
               </button>
               <button
                 type="submit"
-                className="flex-1 px-4 py-2.5 bg-[#2563EB] text-white rounded-xl text-sm font-medium hover:bg-[#1D4ED8] shadow-lg shadow-blue-500/20 transition-all flex items-center justify-center gap-2"
+                disabled={isSubmitting}
+                className="flex-1 px-4 py-2.5 bg-[#2563EB] text-white rounded-xl text-sm font-medium hover:bg-[#1D4ED8] shadow-lg shadow-blue-500/20 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <Save size={18} />
-                Save Lead
+                {isSubmitting ? (
+                  <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></span>
+                ) : (
+                  <Save size={18} />
+                )}
+                {isSubmitting ? "Saving..." : "Save Lead"}
               </button>
             </div>
           </form>

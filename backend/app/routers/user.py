@@ -14,6 +14,17 @@ router = APIRouter(prefix="/api/users", tags=["users"])
 auth_router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 
+@router.get("/agents", response_model=list[UserRead])
+async def list_agents(
+    db: AsyncSession = Depends(get_db),
+    _=Depends(require_role(Role.ADMIN, Role.MANAGER)),
+):
+    result = await db.execute(
+        select(User).where(User.role == Role.AGENT, User.status == "Active").order_by(User.name)
+    )
+    return result.scalars().all()
+
+
 @auth_router.post("/login", response_model=TokenResponse)
 async def login(data: LoginRequest, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(User).where(User.email == data.email))

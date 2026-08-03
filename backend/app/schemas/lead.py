@@ -13,6 +13,7 @@ class LeadBase(BaseModel):
     status: str = "New"
     assigned: str = "Unassigned"
     date: str = ""
+    requirement: str = ""
     property_id: str | None = None
     assigned_to: str | None = None
 
@@ -32,6 +33,7 @@ class LeadUpdate(BaseModel):
     status: str | None = None
     assigned: str | None = None
     date: str | None = None
+    requirement: str | None = None
     property_id: str | None = None
     assigned_to: str | None = None
 

@@ -8,7 +8,7 @@ import type { Lead } from "@/lib/types";
 interface EditLeadCardProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (id: string, data: Record<string, string>) => void;
+  onSubmit: (id: string, data: Record<string, string>) => Promise<void>;
   lead: Lead | null;
 }
 
@@ -16,7 +16,7 @@ export function EditLeadCard({ isOpen, onClose, onSubmit, lead }: EditLeadCardPr
   const [formData, setFormData] = useState({
     name: lead?.name || "",
     phone: lead?.phone || "",
-    email: "",
+    email: lead?.email || "",
     budget: lead?.budget || "",
     area: lead?.area || "",
     propertyType: lead?.type || "",
@@ -24,12 +24,20 @@ export function EditLeadCard({ isOpen, onClose, onSubmit, lead }: EditLeadCardPr
     notes: "",
     status: (lead?.status || "New") as string,
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!lead) return;
-    onSubmit(lead.id, formData);
-    onClose();
+    setIsSubmitting(true);
+    try {
+      await onSubmit(lead.id, formData);
+      onClose();
+    } catch {
+      // Error is already shown by parent via showToast
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -167,10 +175,14 @@ export function EditLeadCard({ isOpen, onClose, onSubmit, lead }: EditLeadCardPr
                 className="flex-1 px-4 py-2.5 border border-[#E2E8F0] text-[#0F172A] rounded-xl text-sm font-medium hover:bg-[#F8FAFC] transition-colors">
                 Cancel
               </button>
-              <button type="submit"
-                className="flex-1 px-4 py-2.5 bg-[#2563EB] text-white rounded-xl text-sm font-medium hover:bg-[#1D4ED8] shadow-lg shadow-blue-500/20 transition-all flex items-center justify-center gap-2">
-                <Save size={18} />
-                Update Lead
+              <button type="submit" disabled={isSubmitting}
+                className="flex-1 px-4 py-2.5 bg-[#2563EB] text-white rounded-xl text-sm font-medium hover:bg-[#1D4ED8] shadow-lg shadow-blue-500/20 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                {isSubmitting ? (
+                  <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></span>
+                ) : (
+                  <Save size={18} />
+                )}
+                {isSubmitting ? "Updating..." : "Update Lead"}
               </button>
             </div>
           </form>
