@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from contextlib import asynccontextmanager
 from functools import partial
 from pathlib import Path
@@ -14,6 +15,7 @@ from app.routers import lead, property, project, user, dashboard, follow_up
 from app.routers import module, role, form, company, workflow, notification, config, dashboard_config
 from app.seed import seed_users
 
+logger = logging.getLogger(__name__)
 BACKEND_DIR = Path(__file__).resolve().parent.parent
 
 
@@ -24,9 +26,17 @@ def run_migrations():
 
 
 async def startup_init():
-    loop = asyncio.get_event_loop()
-    await loop.run_in_executor(None, run_migrations)
-    await seed_users()
+    try:
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(None, run_migrations)
+        logger.info("Migrations completed")
+    except Exception as e:
+        logger.error(f"Migration failed: {e}")
+    try:
+        await seed_users()
+        logger.info("Seed completed")
+    except Exception as e:
+        logger.error(f"Seed failed: {e}")
 
 
 @asynccontextmanager

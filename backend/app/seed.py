@@ -279,26 +279,34 @@ SAMPLE_FOLLOW_UPS = [
 
 
 async def seed_sample_data(db):
-    existing = await db.execute(select(Lead).limit(1))
-    if existing.scalar_one_or_none():
-        return
-
     for i, lead_data in enumerate(SAMPLE_LEADS):
+        result = await db.execute(select(Lead).where(Lead.name == lead_data["name"]))
+        if result.scalar_one_or_none():
+            continue
         lead_id = f"LEAD-SAMPLE-{i+1:03d}"
         lead = Lead(id=lead_id, date="Aug 2026", **lead_data)
         db.add(lead)
 
     for i, prop_data in enumerate(SAMPLE_PROPERTIES):
+        result = await db.execute(select(Property).where(Property.title == prop_data["title"]))
+        if result.scalar_one_or_none():
+            continue
         prop_id = f"PROP-SAMPLE-{i+1:03d}"
         prop = Property(id=prop_id, **prop_data)
         db.add(prop)
 
     for i, proj_data in enumerate(SAMPLE_PROJECTS):
+        result = await db.execute(select(Project).where(Project.name == proj_data["name"]))
+        if result.scalar_one_or_none():
+            continue
         proj_id = f"PROJ-SAMPLE-{i+1:03d}"
         proj = Project(id=proj_id, **proj_data)
         db.add(proj)
 
     for i, fu_data in enumerate(SAMPLE_FOLLOW_UPS):
+        result = await db.execute(select(FollowUp).where(FollowUp.lead_name == fu_data["lead_name"]))
+        if result.scalar_one_or_none():
+            continue
         fu_id = f"FU-SAMPLE-{i+1:03d}"
         fu = FollowUp(id=fu_id, **fu_data)
         db.add(fu)
