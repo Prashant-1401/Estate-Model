@@ -1,4 +1,6 @@
+import asyncio
 from contextlib import asynccontextmanager
+from functools import partial
 from pathlib import Path
 
 from alembic import command
@@ -21,11 +23,17 @@ def run_migrations():
     command.upgrade(cfg, "head")
 
 
+async def startup_init():
+    loop = asyncio.get_event_loop()
+    await loop.run_in_executor(None, run_migrations)
+    await seed_users()
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    run_migrations()
-    await seed_users()
+    task = asyncio.create_task(startup_init())
     yield
+    await task
     await engine.dispose()
 
 
