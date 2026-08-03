@@ -51,6 +51,16 @@ export interface Lead {
   assigned_to?: string;
 }
 
+export interface Activity {
+  id: string;
+  lead_id: string;
+  type: "call" | "chat" | "note";
+  description: string;
+  note: string;
+  performed_by: string;
+  created_at?: string;
+}
+
 export interface Property {
   id: string;
   title: string;

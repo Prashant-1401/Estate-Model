@@ -19,6 +19,7 @@ from app.models.notification_rule import NotificationRule
 from app.models.status import Status
 from app.models.lead_source import LeadSource
 from app.models.dashboard_widget import DashboardWidget, UserDashboard
+from app.models.activity import Activity
 
 __all__ = [
     "Lead",
@@ -43,4 +44,5 @@ __all__ = [
     "LeadSource",
     "DashboardWidget",
     "UserDashboard",
+    "Activity",
 ]

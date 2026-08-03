@@ -4,6 +4,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { Search, Filter, Download, MoreHorizontal, MessageCircle, Phone, Edit2, Trash2, ChevronDown, AlertTriangle, RefreshCw } from "lucide-react";
 import type { Lead } from "@/lib/types";
+import { logLeadActivity } from "@/lib/activities";
 import { Pagination } from "@/components/Pagination";
 
 const statusColors: Record<string, string> = {
@@ -191,8 +192,8 @@ export function LeadsTable({
                     <td className="px-6 py-4 text-sm text-[#64748B]">{lead.assigned}</td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <a href={`https://wa.me/${lead.phone.replace(/\D/g, "")}?text=${encodeURIComponent(`Hello ${lead.name}!`)}`} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="p-2 text-[#22C55E] hover:bg-green-50 rounded-lg transition-colors" title="WhatsApp"><MessageCircle size={16} /></a>
-                        <a href={`tel:${lead.phone.replace(/\s+/g, "")}`} onClick={(e) => e.stopPropagation()} className="p-2 text-[#2563EB] hover:bg-blue-50 rounded-lg transition-colors" title="Call"><Phone size={16} /></a>
+                        <a href={`https://wa.me/${lead.phone.replace(/\D/g, "")}?text=${encodeURIComponent(`Hello ${lead.name}!`)}`} target="_blank" rel="noopener noreferrer" onClick={(e) => { e.stopPropagation(); void logLeadActivity(lead.id, "chat"); }} className="p-2 text-[#22C55E] hover:bg-green-50 rounded-lg transition-colors" title="WhatsApp"><MessageCircle size={16} /></a>
+                        <a href={`tel:${lead.phone.replace(/\s+/g, "")}`} onClick={(e) => { e.stopPropagation(); void logLeadActivity(lead.id, "call"); }} className="p-2 text-[#2563EB] hover:bg-blue-50 rounded-lg transition-colors" title="Call"><Phone size={16} /></a>
                         {onEdit && <button onClick={(e) => { e.stopPropagation(); onEdit(lead); }} className="p-2 text-[#2563EB] hover:bg-blue-50 rounded-lg transition-colors" title="Edit"><Edit2 size={16} /></button>}
                         {onDelete && <button onClick={(e) => { e.stopPropagation(); onDelete(lead.id); }} className="p-2 text-[#EF4444] hover:bg-red-50 rounded-lg transition-colors" title="Delete"><Trash2 size={16} /></button>}
                       </div>
@@ -270,10 +271,10 @@ export function LeadsTable({
               </div>
 
               <div className="flex gap-2 pt-3 border-t border-[#E2E8F0]">
-                <a href={`https://wa.me/${lead.phone.replace(/\D/g, "")}?text=${encodeURIComponent(`Hello ${lead.name}!`)}`} target="_blank" rel="noopener noreferrer" className="flex-1 flex items-center justify-center gap-2 py-2 bg-[#22C55E] text-white rounded-xl text-sm font-medium">
+                <a href={`https://wa.me/${lead.phone.replace(/\D/g, "")}?text=${encodeURIComponent(`Hello ${lead.name}!`)}`} target="_blank" rel="noopener noreferrer" onClick={() => void logLeadActivity(lead.id, "chat")} className="flex-1 flex items-center justify-center gap-2 py-2 bg-[#22C55E] text-white rounded-xl text-sm font-medium">
                   <MessageCircle size={16} /> WhatsApp
                 </a>
-                <a href={`tel:${lead.phone.replace(/\s+/g, "")}`} className="flex-1 flex items-center justify-center gap-2 py-2 bg-[#2563EB] text-white rounded-xl text-sm font-medium">
+                <a href={`tel:${lead.phone.replace(/\s+/g, "")}`} onClick={() => void logLeadActivity(lead.id, "call")} className="flex-1 flex items-center justify-center gap-2 py-2 bg-[#2563EB] text-white rounded-xl text-sm font-medium">
                   <Phone size={16} /> Call
                 </a>
                 {onViewCustomer && (
