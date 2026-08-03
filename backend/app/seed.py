@@ -12,6 +12,10 @@ from app.models.status import Status
 from app.models.lead_source import LeadSource
 from app.models.dashboard_widget import DashboardWidget
 from app.models.notification_template import NotificationTemplate
+from app.models.lead import Lead
+from app.models.property import Property
+from app.models.project import Project
+from app.models.follow_up import FollowUp
 from app.auth import hash_password
 
 
@@ -223,6 +227,85 @@ async def seed_notification_templates(db):
     await db.flush()
 
 
+SAMPLE_LEADS = [
+    {"name": "Rahul Sharma", "phone": "+91 98765 43210", "email": "rahul.sharma@email.com", "budget": "80L - 1.2Cr", "area": "2000 sq ft", "type": "3 BHK Flat", "source": "Google Ads", "status": "Hot", "assigned": "Agent", "requirement": "Looking for a 3 BHK in Whitefield with good schools nearby"},
+    {"name": "Priya Patel", "phone": "+91 87654 32109", "email": "priya.patel@email.com", "budget": "50L - 75L", "area": "1200 sq ft", "type": "2 BHK Flat", "source": "99Acres", "status": "Warm", "assigned": "Agent", "requirement": "2 BHK near metro station, semi-furnished preferred"},
+    {"name": "Amit Singh", "phone": "+91 76543 21098", "email": "amit.singh@email.com", "budget": "1.5Cr - 2Cr", "area": "3000 sq ft", "type": "Villa", "source": "Referral", "status": "New", "assigned": "Unassigned", "requirement": "Independent villa with garden, budget flexible for right property"},
+    {"name": "Sneha Reddy", "phone": "+91 65432 10987", "email": "sneha.reddy@email.com", "budget": "40L - 60L", "area": "1000 sq ft", "type": "1 BHK Flat", "source": "MagicBricks", "status": "Contacted", "assigned": "Manager", "requirement": "1 BHK for investment purpose, near IT park"},
+    {"name": "Vikram Desai", "phone": "+91 54321 09876", "email": "vikram.desai@email.com", "budget": "2Cr - 3Cr", "area": "3500 sq ft", "type": "Penthouse", "source": "Direct Walk-In", "status": "Negotiation", "assigned": "Agent", "requirement": "Premium penthouse with city view, ready to move"},
+    {"name": "Ananya Gupta", "phone": "+91 43210 98765", "email": "ananya.gupta@email.com", "budget": "60L - 80L", "area": "1500 sq ft", "type": "2 BHK Flat", "source": "Facebook", "status": "Interested", "assigned": "Agent", "requirement": "2 BHK in gated community with gym and pool"},
+    {"name": "Karthik Nair", "phone": "+91 32109 87654", "email": "karthik.nair@email.com", "budget": "1Cr - 1.5Cr", "area": "2200 sq ft", "type": "3 BHK Flat", "source": "Website", "status": "Visit Scheduled", "assigned": "Manager", "requirement": "3 BHK with parking, near schools and hospitals"},
+    {"name": "Meera Joshi", "phone": "+91 21098 76543", "email": "meera.joshi@email.com", "budget": "35L - 50L", "area": "900 sq ft", "type": "Studio Apartment", "source": "Housing", "status": "New", "assigned": "Unassigned", "requirement": "Studio apartment near IT corridor, fully furnished"},
+    {"name": "Arjun Mehta", "phone": "+91 10987 65432", "email": "arjun.mehta@email.com", "budget": "90L - 1.3Cr", "area": "1800 sq ft", "type": "3 BHK Flat", "source": "Broker Referral", "status": "Visited", "assigned": "Agent", "requirement": "3 BHK in good locality, ready for possession by December"},
+    {"name": "Deepa Iyer", "phone": "+91 09876 54321", "email": "deepa.iyer@email.com", "budget": "70L - 1Cr", "area": "1600 sq ft", "type": "2 BHK Flat", "source": "Instagram", "status": "Booked", "assigned": "Manager", "requirement": "2 BHK near tech park, already shortlisted 2 properties"},
+    {"name": "Sanjay Kumar", "phone": "+91 98123 45678", "email": "sanjay.kumar@email.com", "budget": "45L - 65L", "area": "1100 sq ft", "type": "2 BHK Flat", "source": "Google Ads", "status": "Hot", "assigned": "Agent", "requirement": "2 BHK with balcony, close to railway station"},
+    {"name": "Pooja Banerjee", "phone": "+91 87123 45678", "email": "pooja.b@email.com", "budget": "1.8Cr - 2.5Cr", "area": "2800 sq ft", "type": "4 BHK Flat", "source": "Referral", "status": "Warm", "assigned": "Manager", "requirement": "Luxury 4 BHK in premium township with all amenities"},
+    {"name": "Rohan Verma", "phone": "+91 76123 45678", "email": "rohan.v@email.com", "budget": "55L - 75L", "area": "1300 sq ft", "type": "2 BHK Flat", "source": "99Acres", "status": "Contacted", "assigned": "Agent", "requirement": "Affordable 2 BHK with good connectivity"},
+    {"name": "Nisha Agarwal", "phone": "+91 65123 45678", "email": "nisha.a@email.com", "budget": "3Cr - 4Cr", "area": "4000 sq ft", "type": "Independent House", "source": "Direct Walk-In", "status": "Negotiation", "assigned": "Agent", "requirement": "Independent house with compound, 4+ bedrooms"},
+    {"name": "Vivek Choudhary", "phone": "+91 54123 45678", "email": "vivek.c@email.com", "budget": "40L - 55L", "type": "1 BHK Flat", "source": "Website", "status": "New", "assigned": "Unassigned", "area": "750 sq ft", "requirement": "1 BHK near metro, first-time buyer"},
+]
+
+SAMPLE_PROPERTIES = [
+    {"title": "Prestige Lakeside Habitat", "location": "Whitefield, Bangalore", "price": "1.2 Cr", "bedrooms": 3, "bathrooms": 2, "area": "1850 sq ft", "type": "Apartment", "status": "Available", "featured": True},
+    {"title": "Brigade Gateway Enclave", "location": "Rajajinagar, Bangalore", "price": "2.5 Cr", "bedrooms": 4, "bathrooms": 3, "area": "2800 sq ft", "type": "Apartment", "status": "Available", "featured": True},
+    {"title": "Sobha Dream Acres", "location": "Panathur, Bangalore", "price": "85 L", "bedrooms": 2, "bathrooms": 2, "area": "1200 sq ft", "type": "Apartment", "status": "Available", "featured": False},
+    {"title": "Embassy Springs", "location": "Devanahalli, Bangalore", "price": "3.2 Cr", "bedrooms": 4, "bathrooms": 4, "area": "3500 sq ft", "type": "Villa", "status": "Available", "featured": True},
+    {"title": "Mantri Serenity", "location": "Dasanapura, Bangalore", "price": "95 L", "bedrooms": 2, "bathrooms": 2, "area": "1350 sq ft", "type": "Apartment", "status": "Sold", "featured": False},
+    {"title": "Godrej Platinum", "location": "Hebbal, Bangalore", "price": "1.8 Cr", "bedrooms": 3, "bathrooms": 3, "area": "2200 sq ft", "type": "Apartment", "status": "Available", "featured": False},
+    {"title": "Ozone Urbana Aqua", "location": "Budigere Cross, Bangalore", "price": "72 L", "bedrooms": 2, "bathrooms": 2, "area": "1100 sq ft", "type": "Apartment", "status": "Available", "featured": False},
+    {"title": "Puravankara Purva Atmosphere", "location": "Thanisandra, Bangalore", "price": "1.5 Cr", "bedrooms": 3, "bathrooms": 2, "area": "1650 sq ft", "type": "Apartment", "status": "Available", "featured": True},
+    {"title": "Assetz Earth & Essence", "location": "Sarjapur Road, Bangalore", "price": "1.1 Cr", "bedrooms": 3, "bathrooms": 2, "area": "1550 sq ft", "type": "Apartment", "status": "Under Construction", "featured": False},
+    {"title": "SattvaViva", "location": "Hoskote, Bangalore", "price": "55 L", "bedrooms": 2, "bathrooms": 2, "area": "1050 sq ft", "type": "Apartment", "status": "Available", "featured": False},
+]
+
+SAMPLE_PROJECTS = [
+    {"name": "Prestige City", "developer": "Prestige Group", "location": "Sarjapur Road, Bangalore", "status": "Under Construction", "total_units": 2500, "units_sold": 1800, "launch_date": "Jan 2024", "completion_date": "Dec 2027", "price_range": "80L - 4Cr", "description": "Integrated township with residential, commercial and retail"},
+    {"name": "Brigade Orchade", "developer": "Brigade Group", "location": "Devanahalli, Bangalore", "status": "Under Construction", "total_units": 1200, "units_sold": 850, "launch_date": "Mar 2023", "completion_date": "Jun 2026", "price_range": "55L - 2.5Cr", "description": "Premium residential project near airport"},
+    {"name": "Sobha Dream Valley", "developer": "Sobha Ltd", "location": "Off Thanisandra Main Road", "status": "Completed", "total_units": 800, "units_sold": 780, "launch_date": "Feb 2022", "completion_date": "Mar 2025", "price_range": "70L - 1.8Cr", "description": "Luxury apartments with world-class amenities"},
+    {"name": "Embassy Lake Terraces", "developer": "Embassy Group", "location": "Hebbal, Bangalore", "status": "Under Construction", "total_units": 400, "units_sold": 320, "launch_date": "Jun 2023", "completion_date": "Sep 2026", "price_range": "2Cr - 6Cr", "description": "Ultra-luxury lakeside residences"},
+    {"name": "Godrej Ananda", "developer": "Godrej Properties", "location": "KR Puram, Bangalore", "status": "Planning", "total_units": 1500, "units_sold": 0, "launch_date": "Q1 2026", "completion_date": "Q4 2029", "price_range": "50L - 1.5Cr", "description": "Affordable luxury project with smart home features"},
+]
+
+SAMPLE_FOLLOW_UPS = [
+    {"lead_id": "LEAD-SAMPLE-001", "lead_name": "Rahul Sharma", "property_title": "Prestige Lakeside Habitat", "assigned_to": "Agent", "status": "Today", "time": "10:30 AM", "note": "Discuss pricing and payment plan"},
+    {"lead_id": "LEAD-SAMPLE-002", "lead_name": "Priya Patel", "property_title": "Sobha Dream Acres", "assigned_to": "Agent", "status": "Today", "time": "2:00 PM", "note": "Schedule site visit"},
+    {"lead_id": "LEAD-SAMPLE-003", "lead_name": "Karthik Nair", "property_title": "Godrej Platinum", "assigned_to": "Manager", "status": "Tomorrow", "time": "11:00 AM", "note": "Follow up on negotiation status"},
+    {"lead_id": "LEAD-SAMPLE-004", "lead_name": "Vikram Desai", "property_title": "Embassy Springs", "assigned_to": "Agent", "status": "Overdue", "time": "Yesterday", "note": "Was supposed to visit but cancelled"},
+    {"lead_id": "LEAD-SAMPLE-005", "lead_name": "Ananya Gupta", "property_title": "Ozone Urbana Aqua", "assigned_to": "Agent", "status": "Tomorrow", "time": "3:30 PM", "note": "Send property brochure and floor plans"},
+    {"lead_id": "LEAD-SAMPLE-006", "lead_name": "Sanjay Kumar", "property_title": "Puravankara Purva Atmosphere", "assigned_to": "Agent", "status": "Today", "time": "4:00 PM", "note": "Finalize deal, bring token amount details"},
+    {"lead_id": "LEAD-SAMPLE-007", "lead_name": "Deepa Iyer", "property_title": "Brigade Gateway Enclave", "assigned_to": "Manager", "status": "Overdue", "time": "2 days ago", "note": "Registration paperwork pending"},
+    {"lead_id": "LEAD-SAMPLE-008", "lead_name": "Nisha Agarwal", "property_title": "Embassy Lake Terraces", "assigned_to": "Agent", "status": "Tomorrow", "time": "5:00 PM", "note": "Present custom floor plan options"},
+]
+
+
+async def seed_sample_data(db):
+    existing = await db.execute(select(Lead).limit(1))
+    if existing.scalar_one_or_none():
+        return
+
+    for i, lead_data in enumerate(SAMPLE_LEADS):
+        lead_id = f"LEAD-SAMPLE-{i+1:03d}"
+        lead = Lead(id=lead_id, date="Aug 2026", **lead_data)
+        db.add(lead)
+
+    for i, prop_data in enumerate(SAMPLE_PROPERTIES):
+        prop_id = f"PROP-SAMPLE-{i+1:03d}"
+        prop = Property(id=prop_id, **prop_data)
+        db.add(prop)
+
+    for i, proj_data in enumerate(SAMPLE_PROJECTS):
+        proj_id = f"PROJ-SAMPLE-{i+1:03d}"
+        proj = Project(id=proj_id, **proj_data)
+        db.add(proj)
+
+    for i, fu_data in enumerate(SAMPLE_FOLLOW_UPS):
+        fu_id = f"FU-SAMPLE-{i+1:03d}"
+        fu = FollowUp(id=fu_id, **fu_data)
+        db.add(fu)
+
+    await db.flush()
+
+
 async def seed_users():
     async with async_session() as db:
         for i, (email, name, role, password) in enumerate([
@@ -253,4 +336,5 @@ async def seed_users():
         await seed_lead_sources(db)
         await seed_dashboard_widgets(db)
         await seed_notification_templates(db)
+        await seed_sample_data(db)
         await db.commit()
