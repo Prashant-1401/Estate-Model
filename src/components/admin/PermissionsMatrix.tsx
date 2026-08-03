@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Grid, Check, Minus } from "lucide-react";
 import { api } from "@/lib/api";
@@ -17,15 +17,8 @@ export function PermissionsMatrix({ isOpen, onClose }: PermissionsMatrixProps) {
   const [matrix, setMatrix] = useState<PermissionMatrix | null>(null);
   const [roles, setRoles] = useState<RoleConfig[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedRole, setSelectedRole] = useState<string>("");
 
-  useEffect(() => {
-    if (isOpen) {
-      loadData();
-    }
-  }, [isOpen]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
       const [matrixRes, rolesRes] = await Promise.all([
@@ -39,7 +32,13 @@ export function PermissionsMatrix({ isOpen, onClose }: PermissionsMatrixProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [showToast]);
+
+  useEffect(() => {
+    if (isOpen) {
+      void Promise.resolve().then(() => loadData());
+    }
+  }, [isOpen, loadData]);
 
   if (!isOpen) return null;
 
@@ -140,11 +139,7 @@ export function PermissionsMatrix({ isOpen, onClose }: PermissionsMatrixProps) {
                   {roles.map((role) => (
                     <div
                       key={role.id}
-                      className={`px-3 py-1.5 rounded-lg border text-sm ${
-                        selectedRole === role.id
-                          ? "bg-[#2563EB] text-white border-[#2563EB]"
-                          : "bg-white text-[#0F172A] border-[#E2E8F0] hover:border-[#2563EB]/30"
-                      }`}
+                      className="px-3 py-1.5 rounded-lg border text-sm bg-white text-[#0F172A] border-[#E2E8F0] hover:border-[#2563EB]/30"
                     >
                       {role.name}
                       {role.is_system && " (System)"}

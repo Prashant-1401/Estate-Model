@@ -1,7 +1,8 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Phone, MessageCircle, MapPin, Calendar, Star, ArrowLeft } from "lucide-react";
+import { Phone, MessageCircle, MapPin, Calendar, Star, ArrowLeft, Share2 } from "lucide-react";
+import { useToast } from "@/lib/toast-context";
 import type { Lead } from "@/lib/types";
 
 interface CustomerProfileProps {
@@ -10,6 +11,8 @@ interface CustomerProfileProps {
 }
 
 export function CustomerProfile({ lead, onBack }: CustomerProfileProps) {
+  const { showToast } = useToast();
+
   if (!lead) {
     return (
       <div className="flex items-center justify-center h-full min-h-[400px]">
@@ -19,11 +22,31 @@ export function CustomerProfile({ lead, onBack }: CustomerProfileProps) {
   }
 
   const initials = lead.name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
+  const waNumber = lead.phone.replace(/\D/g, "");
 
   const statusOrder: Record<string, number> = { New: 0, Warm: 1, Hot: 2, Cold: 0 };
   const completed = statusOrder[lead.status] ?? 0;
 
   const steps = ["Initial Contact", "Site Visit", "Negotiation", "Closed"];
+
+  const handleShare = async () => {
+    const shareText = `${lead.name} | ${lead.phone} | ${lead.type} | ${lead.area} | ${lead.budget}`;
+    const shareData = { title: `${lead.name} - Lead`, text: shareText };
+    if (typeof navigator !== "undefined" && navigator.share) {
+      try {
+        await navigator.share(shareData);
+      } catch {
+        // User dismissed the share sheet
+      }
+    } else {
+      try {
+        await navigator.clipboard.writeText(shareText);
+        showToast("Lead details copied to clipboard", "success");
+      } catch {
+        showToast("Failed to copy lead details", "error");
+      }
+    }
+  };
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -49,11 +72,22 @@ export function CustomerProfile({ lead, onBack }: CustomerProfileProps) {
           <p className="text-[#64748B] text-sm mt-1">Lead &bull; {lead.type}</p>
 
           <div className="flex justify-center gap-2 mt-6">
-            <button className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-[#22C55E] text-white rounded-xl text-sm font-medium hover:bg-green-600 transition-colors">
+            <a
+              href={`https://wa.me/${waNumber}?text=${encodeURIComponent(`Hello ${lead.name}!`)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-[#22C55E] text-white rounded-xl text-sm font-medium hover:bg-green-600 transition-colors"
+            >
               <MessageCircle size={18} /> WhatsApp
-            </button>
-            <button className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-[#2563EB] text-white rounded-xl text-sm font-medium hover:bg-[#1D4ED8] transition-colors">
+            </a>
+            <a
+              href={`tel:${lead.phone.replace(/\s+/g, "")}`}
+              className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-[#2563EB] text-white rounded-xl text-sm font-medium hover:bg-[#1D4ED8] transition-colors"
+            >
               <Phone size={18} /> Call
+            </a>
+            <button onClick={handleShare} className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-[#F8FAFC] text-[#0F172A] border border-[#E2E8F0] rounded-xl text-sm font-medium hover:bg-[#E2E8F0] transition-colors">
+              <Share2 size={18} /> Share
             </button>
           </div>
 

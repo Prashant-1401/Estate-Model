@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Bell, Plus, Edit2, Trash2, FileText, Zap, ToggleLeft, ToggleRight } from "lucide-react";
+import { X, Bell, Plus, Edit2, Trash2, FileText, Zap } from "lucide-react";
 import { api } from "@/lib/api";
 import { useToast } from "@/lib/toast-context";
 import type { NotificationTemplate, NotificationRule } from "@/lib/types";
@@ -10,15 +10,16 @@ import type { NotificationTemplate, NotificationRule } from "@/lib/types";
 interface NotificationManagerProps {
   isOpen: boolean;
   onClose: () => void;
+  embedded?: boolean;
 }
 
-export function NotificationManager({ isOpen, onClose }: NotificationManagerProps) {
+export function NotificationManager({ isOpen, onClose, embedded = false }: NotificationManagerProps) {
   const { showToast } = useToast();
   const [tab, setTab] = useState<"templates" | "rules">("templates");
   const [templates, setTemplates] = useState<NotificationTemplate[]>([]);
   const [rules, setRules] = useState<NotificationRule[]>([]);
   const [loading, setLoading] = useState(true);
-  const [editingItem, setEditingItem] = useState<any>(null);
+  const [editingItem, setEditingItem] = useState<NotificationTemplate | NotificationRule | null>(null);
   const [isCreating, setIsCreating] = useState(false);
 
   const [templateForm, setTemplateForm] = useState({
@@ -34,14 +35,10 @@ export function NotificationManager({ isOpen, onClose }: NotificationManagerProp
     trigger_event: "lead_created",
     template_id: "",
     recipients: [] as string[],
-    conditions: {} as Record<string, any>,
+    conditions: {} as Record<string, unknown>,
   });
 
-  useEffect(() => {
-    if (isOpen) loadData();
-  }, [isOpen]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
       const [tRes, rRes] = await Promise.all([
@@ -55,7 +52,11 @@ export function NotificationManager({ isOpen, onClose }: NotificationManagerProp
     } finally {
       setLoading(false);
     }
-  };
+  }, [showToast]);
+
+  useEffect(() => {
+    if (isOpen) void Promise.resolve().then(() => loadData());
+  }, [isOpen, loadData]);
 
   const handleSaveTemplate = async () => {
     if (!templateForm.name.trim()) {
@@ -136,7 +137,7 @@ export function NotificationManager({ isOpen, onClose }: NotificationManagerProp
     setIsCreating(true);
   };
 
-  if (!isOpen) return null;
+  if (!isOpen && !embedded) return null;
 
   return (
     <AnimatePresence>
@@ -144,15 +145,15 @@ export function NotificationManager({ isOpen, onClose }: NotificationManagerProp
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-0 sm:p-4"
-        onClick={onClose}
+        className={embedded ? "flex flex-col h-full" : "fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-0 sm:p-4"}
+        onClick={embedded ? undefined : onClose}
       >
         <motion.div
           initial={{ scale: 0.95, opacity: 0, y: 20 }}
           animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.95, opacity: 0, y: 20 }}
           onClick={(e) => e.stopPropagation()}
-          className="bg-white rounded-none sm:rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col"
+          className={embedded ? "bg-white w-full h-full flex flex-col" : "bg-white rounded-none sm:rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col"}
         >
           <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-[#E2E8F0] shrink-0">
             <div className="flex items-center gap-3">
@@ -180,9 +181,11 @@ export function NotificationManager({ isOpen, onClose }: NotificationManagerProp
                 <Plus size={16} />
                 <span className="hidden sm:inline">Add {tab === "templates" ? "Template" : "Rule"}</span>
               </button>
-              <button onClick={onClose} className="p-2 hover:bg-[#F8FAFC] rounded-xl transition-colors">
-                <X size={20} className="text-[#64748B]" />
-              </button>
+              {!embedded && (
+                <button onClick={onClose} className="p-2 hover:bg-[#F8FAFC] rounded-xl transition-colors">
+                  <X size={20} className="text-[#64748B]" />
+                </button>
+              )}
             </div>
           </div>
 

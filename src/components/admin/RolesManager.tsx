@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Shield, Plus, Edit2, Trash2 } from "lucide-react";
 import { api } from "@/lib/api";
@@ -20,7 +20,7 @@ export function RolesManager({ isOpen, onClose }: RolesManagerProps) {
   const [editingRole, setEditingRole] = useState<RoleConfig | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
-  const loadRoles = async () => {
+  const loadRoles = useCallback(async () => {
     try {
       setLoading(true);
       const res = await api.get<RoleConfig[] | { items: RoleConfig[] }>("/api/roles/all");
@@ -30,13 +30,13 @@ export function RolesManager({ isOpen, onClose }: RolesManagerProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [showToast]);
 
   useEffect(() => {
     if (isOpen) {
-      loadRoles();
+      void Promise.resolve().then(() => loadRoles());
     }
-  }, [isOpen]);
+  }, [isOpen, loadRoles]);
 
   const handleDelete = async (role: RoleConfig) => {
     if (role.is_system) {

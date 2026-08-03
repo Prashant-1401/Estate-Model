@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Building2, Save, Globe, Clock, CreditCard } from "lucide-react";
+import { X, Building2, Save, Globe } from "lucide-react";
 import { api } from "@/lib/api";
 import { useToast } from "@/lib/toast-context";
 import type { Company } from "@/lib/types";
@@ -29,11 +29,7 @@ export function CompanySettings({ isOpen, onClose }: CompanySettingsProps) {
     working_hours: "9:00 AM - 6:00 PM",
   });
 
-  useEffect(() => {
-    if (isOpen) loadCompany();
-  }, [isOpen]);
-
-  const loadCompany = async () => {
+  const loadCompany = useCallback(async () => {
     try {
       setLoading(true);
       const res = await api.get<Company>("/api/company");
@@ -54,7 +50,11 @@ export function CompanySettings({ isOpen, onClose }: CompanySettingsProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [showToast]);
+
+  useEffect(() => {
+    if (isOpen) void Promise.resolve().then(() => loadCompany());
+  }, [isOpen, loadCompany]);
 
   const handleSave = async () => {
     if (!formData.name.trim()) {

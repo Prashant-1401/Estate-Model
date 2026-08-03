@@ -156,8 +156,8 @@ export interface FormField {
   is_read_only: boolean;
   is_hidden: boolean;
   sort_order: number;
-  validation_rules: Record<string, any>;
-  metadata?: Record<string, any>;
+  validation_rules: Record<string, unknown>;
+  metadata?: Record<string, unknown>;
   options?: FieldOption[];
   is_active?: boolean;
   created_at?: string;
@@ -196,7 +196,7 @@ export interface Company {
   currency: string;
   timezone: string;
   working_hours: string;
-  settings: Record<string, any>;
+  settings: Record<string, unknown>;
   is_active: boolean;
   created_at?: string;
   updated_at?: string;
@@ -216,7 +216,7 @@ export interface WorkflowStep {
   name: string;
   step_type: string;
   action: string;
-  config: Record<string, any>;
+  config: Record<string, unknown>;
   sort_order: number;
   is_active?: boolean;
   created_at?: string;
@@ -254,7 +254,7 @@ export interface NotificationRule {
   trigger_event: string;
   template_id: string;
   recipients: string[];
-  conditions: Record<string, any>;
+  conditions: Record<string, unknown>;
   is_active: boolean;
   created_at?: string;
   updated_at?: string;
@@ -291,7 +291,7 @@ export interface DashboardWidget {
   name: string;
   widget_type: string;
   description: string;
-  config: Record<string, any>;
+  config: Record<string, unknown>;
   sort_order: number;
   is_active: boolean;
   created_at?: string;
@@ -301,8 +301,11 @@ export interface DashboardWidget {
 export interface UserDashboard {
   id: string;
   user_id: string;
-  widgets: { widget_id: string; config?: Record<string, any> }[];
-  layout: Record<string, any>;
+  widgets: { widget_id: string; config?: Record<string, unknown> }[];
+  layout: Record<string, unknown>;
   created_at?: string;
   updated_at?: string;
 }
+
+export type FormValue = string | number | boolean | string[] | null;
+export type FormData = Record<string, FormValue>;

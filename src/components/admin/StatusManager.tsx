@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, GitBranch, Plus, Edit2, Trash2, GripVertical, ChevronUp, ChevronDown } from "lucide-react";
+import { X, GitBranch, Plus, Edit2, Trash2, ChevronUp, ChevronDown } from "lucide-react";
 import { api } from "@/lib/api";
 import { useToast } from "@/lib/toast-context";
 import type { StatusConfig } from "@/lib/types";
@@ -10,6 +10,7 @@ import type { StatusConfig } from "@/lib/types";
 interface StatusManagerProps {
   isOpen: boolean;
   onClose: () => void;
+  embedded?: boolean;
 }
 
 const COLORS = [
@@ -17,7 +18,7 @@ const COLORS = [
   "#06B6D4", "#F97316", "#EC4899", "#14B8A6", "#6366F1",
 ];
 
-export function StatusManager({ isOpen, onClose }: StatusManagerProps) {
+export function StatusManager({ isOpen, onClose, embedded = false }: StatusManagerProps) {
   const { showToast } = useToast();
   const [statuses, setStatuses] = useState<StatusConfig[]>([]);
   const [loading, setLoading] = useState(true);
@@ -30,11 +31,7 @@ export function StatusManager({ isOpen, onClose }: StatusManagerProps) {
     entity_type: "lead",
   });
 
-  useEffect(() => {
-    if (isOpen) loadStatuses();
-  }, [isOpen]);
-
-  const loadStatuses = async () => {
+  const loadStatuses = useCallback(async () => {
     try {
       setLoading(true);
       const res = await api.get<{ items: StatusConfig[] }>("/api/config/statuses?per_page=100");
@@ -44,7 +41,11 @@ export function StatusManager({ isOpen, onClose }: StatusManagerProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [showToast]);
+
+  useEffect(() => {
+    if (isOpen) void Promise.resolve().then(() => loadStatuses());
+  }, [isOpen, loadStatuses]);
 
   const handleSave = async () => {
     if (!formData.name.trim() || !formData.slug.trim()) {
@@ -96,7 +97,7 @@ export function StatusManager({ isOpen, onClose }: StatusManagerProps) {
     setIsCreating(true);
   };
 
-  if (!isOpen) return null;
+  if (!isOpen && !embedded) return null;
 
   return (
     <AnimatePresence>
@@ -104,15 +105,15 @@ export function StatusManager({ isOpen, onClose }: StatusManagerProps) {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-0 sm:p-4"
-        onClick={onClose}
+        className={embedded ? "flex flex-col h-full" : "fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-0 sm:p-4"}
+        onClick={embedded ? undefined : onClose}
       >
         <motion.div
           initial={{ scale: 0.95, opacity: 0, y: 20 }}
           animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.95, opacity: 0, y: 20 }}
           onClick={(e) => e.stopPropagation()}
-          className="bg-white rounded-none sm:rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col"
+          className={embedded ? "bg-white w-full h-full flex flex-col" : "bg-white rounded-none sm:rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col"}
         >
           <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-[#E2E8F0] shrink-0">
             <div className="flex items-center gap-3">
@@ -132,9 +133,11 @@ export function StatusManager({ isOpen, onClose }: StatusManagerProps) {
                 <Plus size={16} />
                 <span className="hidden sm:inline">Add Status</span>
               </button>
-              <button onClick={onClose} className="p-2 hover:bg-[#F8FAFC] rounded-xl transition-colors">
-                <X size={20} className="text-[#64748B]" />
-              </button>
+              {!embedded && (
+                <button onClick={onClose} className="p-2 hover:bg-[#F8FAFC] rounded-xl transition-colors">
+                  <X size={20} className="text-[#64748B]" />
+                </button>
+              )}
             </div>
           </div>
 

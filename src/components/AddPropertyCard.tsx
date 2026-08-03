@@ -2,17 +2,18 @@
 
 import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, MapPin, Bed, Bath, Square, Building, IndianRupee, Save, ImagePlus, Trash2 } from "lucide-react";
-import type { Property } from "@/lib/types";
+import { X, MapPin, Bed, Bath, Square, Building, IndianRupee, Save, ImagePlus, Trash2, FolderTree } from "lucide-react";
+import type { Project, Property } from "@/lib/types";
 import { useToast } from "@/lib/toast-context";
 
 interface AddPropertyCardProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (property: Property) => void;
+  projects?: Project[];
 }
 
-export function AddPropertyCard({ isOpen, onClose, onSubmit }: AddPropertyCardProps) {
+export function AddPropertyCard({ isOpen, onClose, onSubmit, projects = [] }: AddPropertyCardProps) {
   const { showToast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [formData, setFormData] = useState({
@@ -24,6 +25,7 @@ export function AddPropertyCard({ isOpen, onClose, onSubmit }: AddPropertyCardPr
     area: "",
     type: "",
     status: "Available" as Property["status"],
+    projectId: "",
   });
   const [photos, setPhotos] = useState<string[]>([]);
   const [errors, setErrors] = useState<{ title?: string; price?: string; bedrooms?: string; bathrooms?: string }>({});
@@ -77,11 +79,12 @@ export function AddPropertyCard({ isOpen, onClose, onSubmit }: AddPropertyCardPr
       area: formData.area,
       type: formData.type,
       status: formData.status,
+      project_id: formData.projectId || undefined,
       images: photos,
     };
     onSubmit(property);
     onClose();
-    setFormData({ title: "", location: "", price: "", bedrooms: "", bathrooms: "", area: "", type: "", status: "Available" });
+    setFormData({ title: "", location: "", price: "", bedrooms: "", bathrooms: "", area: "", type: "", status: "Available", projectId: "" });
     setPhotos([]);
     setErrors({});
   };
@@ -206,6 +209,23 @@ export function AddPropertyCard({ isOpen, onClose, onSubmit }: AddPropertyCardPr
                   </select>
                 </div>
               </div>
+
+              <div className="sm:col-span-2 space-y-1.5">
+                <label className="text-sm font-medium text-[#0F172A]">Link to Project</label>
+                <div className="relative">
+                  <FolderTree className="absolute left-3 top-1/2 -translate-y-1/2 text-[#64748B]" size={18} />
+                  <select value={formData.projectId} onChange={(e) => setFormData({ ...formData, projectId: e.target.value })}
+                    className="w-full pl-10 pr-4 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition-all appearance-none">
+                    <option value="">None</option>
+                    {projects.map((project) => (
+                      <option key={project.id} value={project.id}>{project.name}{project.location ? ` — ${project.location}` : ""}</option>
+                    ))}
+                  </select>
+                </div>
+                {projects.length === 0 && (
+                  <p className="text-xs text-[#94A3B8]">No projects available yet</p>
+                )}
+              </div>
             </div>
 
             <div className="sm:col-span-2 space-y-1.5">
@@ -213,6 +233,7 @@ export function AddPropertyCard({ isOpen, onClose, onSubmit }: AddPropertyCardPr
               <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
                 {photos.map((photo, i) => (
                   <div key={i} className="relative aspect-[4/3] bg-[#F8FAFC] rounded-xl border border-[#E2E8F0] overflow-hidden group">
+                    {/* eslint-disable-next-line @next/next/no-img-element -- base64 uploads, next/image does not apply */}
                     <img src={photo} alt="" className="w-full h-full object-cover" />
                     <button type="button" onClick={() => removePhoto(i)}
                       className="absolute top-1 right-1 p-1.5 bg-black/50 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500/80">

@@ -1,40 +1,23 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  X, FormInput, Plus, GripVertical, Trash2, ChevronDown, ChevronUp,
-  Type, Hash, Mail, Phone, Calendar, Clock, List, CheckSquare, Upload, MapPin, Edit2,
+  X, FormInput, Plus, GripVertical, Trash2, ChevronDown, ChevronUp, Edit2,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { useToast } from "@/lib/toast-context";
-import type { FormConfig, FormSection, FormField, FieldOption } from "@/lib/types";
+import type { FormConfig, FormSection, FormField } from "@/lib/types";
 
 interface FormBuilderProps {
   isOpen: boolean;
   onClose: () => void;
   formId?: string | null;
   entityType?: "lead" | "property" | "project";
+  embedded?: boolean;
 }
 
-const FIELD_TYPES = [
-  { value: "text", label: "Text", icon: Type },
-  { value: "number", label: "Number", icon: Hash },
-  { value: "email", label: "Email", icon: Mail },
-  { value: "phone", label: "Phone", icon: Phone },
-  { value: "dropdown", label: "Dropdown", icon: List },
-  { value: "multi_select", label: "Multi Select", icon: List },
-  { value: "checkbox", label: "Checkbox", icon: CheckSquare },
-  { value: "radio", label: "Radio Button", icon: List },
-  { value: "date", label: "Date", icon: Calendar },
-  { value: "time", label: "Time", icon: Clock },
-  { value: "currency", label: "Currency", icon: Hash },
-  { value: "textarea", label: "Text Area", icon: Type },
-  { value: "file", label: "File Upload", icon: Upload },
-  { value: "location", label: "GPS Location", icon: MapPin },
-];
-
-export function FormBuilder({ isOpen, onClose, formId, entityType = "lead" }: FormBuilderProps) {
+export function FormBuilder({ isOpen, onClose, formId, entityType = "lead", embedded = false }: FormBuilderProps) {
   const { showToast } = useToast();
   const [form, setForm] = useState<FormConfig | null>(null);
   const [loading, setLoading] = useState(false);
@@ -45,27 +28,7 @@ export function FormBuilder({ isOpen, onClose, formId, entityType = "lead" }: Fo
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
   const [editingField, setEditingField] = useState<{ sectionId: string; field: FormField } | null>(null);
 
-  useEffect(() => {
-    if (isOpen) {
-      if (formId) {
-        loadForm(formId);
-      } else {
-        setForm(null);
-        setFormName(`${entityType.charAt(0).toUpperCase() + entityType.slice(1)} Form`);
-        setFormDescription("");
-        setSections([{
-          id: `sec-${Date.now()}`,
-          form_id: "",
-          name: "Basic Information",
-          description: "",
-          sort_order: 0,
-          fields: [],
-        }]);
-      }
-    }
-  }, [isOpen, formId]);
-
-  const loadForm = async (id: string) => {
+  const loadForm = useCallback(async (id: string) => {
     try {
       setLoading(true);
       const data = await api.get<FormConfig>(`/api/forms/${id}`);
@@ -81,7 +44,32 @@ export function FormBuilder({ isOpen, onClose, formId, entityType = "lead" }: Fo
     } finally {
       setLoading(false);
     }
-  };
+  }, [showToast]);
+
+  useEffect(() => {
+    if (isOpen && formId) {
+      void Promise.resolve().then(() => loadForm(formId));
+    }
+  }, [isOpen, formId, loadForm]);
+
+  const sessionToken = isOpen ? (formId ? `edit:${formId}` : "create") : null;
+  const [lastSession, setLastSession] = useState<string | null>(null);
+  if (sessionToken && lastSession !== sessionToken) {
+    setLastSession(sessionToken);
+    if (!formId) {
+      setForm(null);
+      setFormName(`${entityType.charAt(0).toUpperCase() + entityType.slice(1)} Form`);
+      setFormDescription("");
+      setSections([{
+        id: "sec-initial",
+        form_id: "",
+        name: "Basic Information",
+        description: "",
+        sort_order: 0,
+        fields: [],
+      }]);
+    }
+  }
 
   const addSection = () => {
     const newSection: FormSection = {
@@ -130,25 +118,6 @@ export function FormBuilder({ isOpen, onClose, formId, entityType = "lead" }: Fo
     setEditingField({ sectionId, field: newField });
   };
 
-  const updateField = (sectionId: string, fieldId: string, updates: Partial<FormField>) => {
-    setSections(sections.map(s =>
-      s.id === sectionId
-        ? {
-            ...s,
-            fields: s.fields.map(f =>
-              f.id === fieldId ? { ...f, ...updates } : f
-            ),
-          }
-        : s
-    ));
-    if (editingField?.field.id === fieldId) {
-      setEditingField({
-        sectionId,
-        field: { ...editingField.field, ...updates },
-      });
-    }
-  };
-
   const removeField = (sectionId: string, fieldId: string) => {
     setSections(sections.map(s =>
       s.id === sectionId ? { ...s, fields: s.fields.filter(f => f.id !== fieldId) } : s
@@ -181,61 +150,6 @@ export function FormBuilder({ isOpen, onClose, formId, entityType = "lead" }: Fo
       [newFields[idx], newFields[swapIdx]] = [newFields[swapIdx], newFields[idx]];
       return { ...s, fields: newFields.map((f, i) => ({ ...f, sort_order: i })) };
     }));
-  };
-
-  const addOption = (sectionId: string, fieldId: string) => {
-    const newOption: FieldOption = {
-      id: `opt-${Date.now()}`,
-      field_id: fieldId,
-      label: "New Option",
-      value: "new_option",
-      sort_order: 0,
-    };
-    setSections(sections.map(s =>
-      s.id === sectionId
-        ? {
-            ...s,
-            fields: s.fields.map(f =>
-              f.id === fieldId ? { ...f, options: [...(f.options || []), newOption] } : f
-            ),
-          }
-        : s
-    ));
-  };
-
-  const updateOption = (sectionId: string, fieldId: string, optionId: string, updates: Partial<FieldOption>) => {
-    setSections(sections.map(s =>
-      s.id === sectionId
-        ? {
-            ...s,
-            fields: s.fields.map(f =>
-              f.id === fieldId
-                ? {
-                    ...f,
-                    options: (f.options || []).map(o =>
-                      o.id === optionId ? { ...o, ...updates } : o
-                    ),
-                  }
-                : f
-            ),
-          }
-        : s
-    ));
-  };
-
-  const removeOption = (sectionId: string, fieldId: string, optionId: string) => {
-    setSections(sections.map(s =>
-      s.id === sectionId
-        ? {
-            ...s,
-            fields: s.fields.map(f =>
-              f.id === fieldId
-                ? { ...f, options: (f.options || []).filter(o => o.id !== optionId) }
-                : f
-            ),
-          }
-        : s
-    ));
   };
 
   const handleSave = async () => {
@@ -275,7 +189,7 @@ export function FormBuilder({ isOpen, onClose, formId, entityType = "lead" }: Fo
     }
   };
 
-  if (!isOpen) return null;
+  if (!isOpen && !embedded) return null;
 
   return (
     <AnimatePresence>
@@ -283,15 +197,15 @@ export function FormBuilder({ isOpen, onClose, formId, entityType = "lead" }: Fo
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-0 sm:p-4"
-        onClick={onClose}
+        className={embedded ? "flex flex-col h-full" : "fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-0 sm:p-4"}
+        onClick={embedded ? undefined : onClose}
       >
         <motion.div
           initial={{ scale: 0.95, opacity: 0, y: 20 }}
           animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.95, opacity: 0, y: 20 }}
           onClick={(e) => e.stopPropagation()}
-          className="bg-white rounded-none sm:rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col"
+          className={embedded ? "bg-white w-full h-full flex flex-col" : "bg-white rounded-none sm:rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col"}
         >
           {/* Header */}
           <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-[#E2E8F0] shrink-0">
@@ -316,9 +230,11 @@ export function FormBuilder({ isOpen, onClose, formId, entityType = "lead" }: Fo
               >
                 {saving ? "Saving..." : "Save Form"}
               </button>
-              <button onClick={onClose} className="p-2 hover:bg-[#F8FAFC] rounded-xl transition-colors">
-                <X size={20} className="text-[#64748B]" />
-              </button>
+              {!embedded && (
+                <button onClick={onClose} className="p-2 hover:bg-[#F8FAFC] rounded-xl transition-colors">
+                  <X size={20} className="text-[#64748B]" />
+                </button>
+              )}
             </div>
           </div>
 

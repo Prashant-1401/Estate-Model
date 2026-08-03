@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
-import { Users, UserPlus, Search, ChevronDown, Check, Phone, Mail, IndianRupee, MapPin } from "lucide-react";
+import { Users, UserPlus, Search, ChevronDown, Check, Phone, IndianRupee, MapPin } from "lucide-react";
 import type { Lead, UserData } from "@/lib/types";
 import { api } from "@/lib/api";
 import { useToast } from "@/lib/toast-context";
@@ -15,27 +15,23 @@ interface ManagerPanelProps {
 export function ManagerPanel({ leads, onRefreshLeads }: ManagerPanelProps) {
   const { showToast } = useToast();
   const [agents, setAgents] = useState<UserData[]>([]);
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [assigningLead, setAssigningLead] = useState<Lead | null>(null);
   const [assigningLoading, setAssigningLoading] = useState(false);
 
-  useEffect(() => {
-    loadAgents();
-  }, []);
-
-  async function loadAgents() {
-    setLoading(true);
+  const loadAgents = useCallback(async () => {
     try {
       const data = await api.get<UserData[]>("/api/users/agents");
       setAgents(data);
     } catch {
       showToast("Failed to load agents", "error");
-    } finally {
-      setLoading(false);
     }
-  }
+  }, [showToast]);
+
+  useEffect(() => {
+    void Promise.resolve().then(() => loadAgents());
+  }, [loadAgents]);
 
   const filteredLeads = leads.filter((lead) => {
     const matchesSearch = !search || 

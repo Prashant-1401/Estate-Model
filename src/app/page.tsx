@@ -24,11 +24,7 @@ import { EditProjectCard } from "@/components/EditProjectCard";
 import { KanbanBoard } from "@/components/KanbanBoard";
 import { RolesManager } from "@/components/admin/RolesManager";
 import { PermissionsMatrix } from "@/components/admin/PermissionsMatrix";
-import { FormBuilder } from "@/components/admin/FormBuilder";
-import { StatusManager } from "@/components/admin/StatusManager";
-import { LeadSourceManager } from "@/components/admin/LeadSourceManager";
-import { NotificationManager } from "@/components/admin/NotificationManager";
-import { WorkflowBuilder } from "@/components/admin/WorkflowBuilder";
+import { ComponentBuilder } from "@/components/admin/ComponentBuilder";
 import { CompanySettings } from "@/components/admin/CompanySettings";
 import { Plus, Building2 as ProjectIcon, Edit2, Trash2, AlertTriangle, RefreshCw } from "lucide-react";
 import type { Property, Project, Lead, UserData, DashboardStats, FollowUp } from "@/lib/types";
@@ -58,23 +54,28 @@ function DashboardContent() {
   const [statsError, setStatsError] = useState("");
   const [isRolesOpen, setIsRolesOpen] = useState(false);
   const [isPermissionsOpen, setIsPermissionsOpen] = useState(false);
-  const [isFormBuilderOpen, setIsFormBuilderOpen] = useState(false);
   const [isCompanyOpen, setIsCompanyOpen] = useState(false);
-  const [isStatusesOpen, setIsStatusesOpen] = useState(false);
-  const [isLeadSourcesOpen, setIsLeadSourcesOpen] = useState(false);
-  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
-  const [isWorkflowsOpen, setIsWorkflowsOpen] = useState(false);
 
   const leads = usePaginatedData<Lead>("/api/leads");
   const properties = usePaginatedData<Property>("/api/properties", { initialPerPage: 9 });
   const projects = usePaginatedData<Project>("/api/projects", { initialPerPage: 10 });
   const users = usePaginatedData<UserData>("/api/users");
   const [followUps, setFollowUps] = useState<FollowUp[]>([]);
+  const [allProjects, setAllProjects] = useState<Project[]>([]);
 
   async function loadFollowUps() {
     try {
       const res = await api.get<{ items: FollowUp[] }>("/api/follow-ups?per_page=100");
       setFollowUps(res.items);
+    } catch {
+      // ignore
+    }
+  }
+
+  async function loadAllProjects() {
+    try {
+      const res = await api.get<{ items: Project[] }>("/api/projects?per_page=100");
+      setAllProjects(res.items);
     } catch {
       // ignore
     }
@@ -93,7 +94,7 @@ function DashboardContent() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      await Promise.all([reloadStats(), loadFollowUps()]);
+      await Promise.all([reloadStats(), loadFollowUps(), loadAllProjects()]);
       if (!cancelled) setLoading(false);
     })();
     return () => { cancelled = true; };
@@ -110,7 +111,8 @@ function DashboardContent() {
         type: leadData.propertyType,
         source: leadData.source || "Direct",
         status: "New",
-        assigned: "Unassigned",
+        assigned: leadData.assigned || "Unassigned",
+        assigned_to: leadData.assignedTo || null,
         requirement: leadData.notes || "",
         date: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
       });
@@ -135,7 +137,7 @@ function DashboardContent() {
   const handleAddProject = async (project: Project) => {
     try {
       await api.post("/api/projects", project);
-      await Promise.all([projects.reload(), reloadStats()]);
+      await Promise.all([projects.reload(), loadAllProjects(), reloadStats()]);
       showToast("Project created successfully", "success");
     } catch (e: unknown) {
       showToast(e instanceof Error ? e.message : "Failed to create project", "error");
@@ -196,6 +198,16 @@ function DashboardContent() {
       showToast("Project updated successfully", "success");
     } catch (e: unknown) {
       showToast(e instanceof Error ? e.message : "Failed to update project", "error");
+    }
+  };
+
+  const handleLinkProject = async (id: string, projectId: string) => {
+    try {
+      await api.put(`/api/properties/${id}`, { project_id: projectId || null });
+      await Promise.all([properties.reload(), loadAllProjects()]);
+      showToast(projectId ? "Property linked to project" : "Project link removed", "success");
+    } catch (e: unknown) {
+      showToast(e instanceof Error ? e.message : "Failed to update project link", "error");
     }
   };
 
@@ -356,6 +368,9 @@ function DashboardContent() {
                       status={property.status}
                       images={property.images}
                       featured={property.featured}
+                      projectId={property.project_id}
+                      projects={allProjects}
+                      onLinkProject={canManage ? handleLinkProject : undefined}
                       onViewDetails={(id) => {
                         const p = properties.items.find((pr) => pr.id === id);
                         if (p) setSelectedProperty(p);
@@ -532,124 +547,8 @@ function DashboardContent() {
             </div>
           </div>
         );
-      case "forms":
-        return (
-          <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <h1 className="text-2xl font-semibold text-[#0F172A]">Form Builder</h1>
-                <p className="text-[#64748B] mt-1 text-sm">Create and manage dynamic forms for leads, properties, and projects</p>
-              </div>
-              <button
-                onClick={() => setIsFormBuilderOpen(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-[#2563EB] text-white rounded-xl text-sm font-medium hover:bg-[#1D4ED8] shadow-lg shadow-blue-500/20 transition-all"
-              >
-                <Plus size={18} />
-                Create Form
-              </button>
-            </div>
-            <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm p-6">
-              <h3 className="text-lg font-medium text-[#0F172A] mb-4">Dynamic Forms</h3>
-              <p className="text-sm text-[#64748B] mb-4">
-                Build custom forms for your CRM. Forms can include text fields, dropdowns, file uploads, and more.
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                {["lead", "property", "project"].map((type) => (
-                  <button
-                    key={type}
-                    onClick={() => {
-                      setIsFormBuilderOpen(true);
-                    }}
-                    className="p-4 border border-[#E2E8F0] rounded-xl hover:border-[#2563EB]/30 transition-colors text-left"
-                  >
-                    <h4 className="font-medium text-[#0F172A] capitalize">{type} Form</h4>
-                    <p className="text-xs text-[#64748B] mt-1">Configure fields for {type} creation</p>
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        );
-      case "statuses":
-        return (
-          <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <h1 className="text-2xl font-semibold text-[#0F172A]">Status Management</h1>
-                <p className="text-[#64748B] mt-1 text-sm">Configure pipeline stages for leads, properties, and projects</p>
-              </div>
-              <button
-                onClick={() => setIsStatusesOpen(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-[#2563EB] text-white rounded-xl text-sm font-medium hover:bg-[#1D4ED8] shadow-lg shadow-blue-500/20 transition-all"
-              >
-                Manage Statuses
-              </button>
-            </div>
-            <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm p-6">
-              <p className="text-sm text-[#64748B]">Define the stages that items progress through in your pipeline.</p>
-            </div>
-          </div>
-        );
-      case "lead-sources":
-        return (
-          <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <h1 className="text-2xl font-semibold text-[#0F172A]">Lead Sources</h1>
-                <p className="text-[#64748B] mt-1 text-sm">Configure where your leads come from</p>
-              </div>
-              <button
-                onClick={() => setIsLeadSourcesOpen(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-[#2563EB] text-white rounded-xl text-sm font-medium hover:bg-[#1D4ED8] shadow-lg shadow-blue-500/20 transition-all"
-              >
-                Manage Sources
-              </button>
-            </div>
-            <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm p-6">
-              <p className="text-sm text-[#64748B]">Track and manage the channels through which leads arrive.</p>
-            </div>
-          </div>
-        );
-      case "notifications":
-        return (
-          <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <h1 className="text-2xl font-semibold text-[#0F172A]">Notification Templates</h1>
-                <p className="text-[#64748B] mt-1 text-sm">Create templates and automation rules for notifications</p>
-              </div>
-              <button
-                onClick={() => setIsNotificationsOpen(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-[#2563EB] text-white rounded-xl text-sm font-medium hover:bg-[#1D4ED8] shadow-lg shadow-blue-500/20 transition-all"
-              >
-                Manage Notifications
-              </button>
-            </div>
-            <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm p-6">
-              <p className="text-sm text-[#64748B]">Define email, SMS, and push notification templates with variables.</p>
-            </div>
-          </div>
-        );
-      case "workflows":
-        return (
-          <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <h1 className="text-2xl font-semibold text-[#0F172A]">Workflow Automation</h1>
-                <p className="text-[#64748B] mt-1 text-sm">Automate lead pipeline actions with multi-step workflows</p>
-              </div>
-              <button
-                onClick={() => setIsWorkflowsOpen(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-[#2563EB] text-white rounded-xl text-sm font-medium hover:bg-[#1D4ED8] shadow-lg shadow-blue-500/20 transition-all"
-              >
-                Manage Workflows
-              </button>
-            </div>
-            <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm p-6">
-              <p className="text-sm text-[#64748B]">Create automated sequences triggered by lead events.</p>
-            </div>
-          </div>
-        );
+      case "components":
+        return <ComponentBuilder />;
       case "company":
         return (
           <div className="space-y-6">
@@ -726,6 +625,7 @@ function DashboardContent() {
         isOpen={isAddPropertyOpen}
         onClose={() => setIsAddPropertyOpen(false)}
         onSubmit={handleAddProperty}
+        projects={allProjects}
       />
 
       <AddProjectCard
@@ -759,6 +659,10 @@ function DashboardContent() {
         isOpen={!!editingProperty}
         onClose={() => setEditingProperty(null)}
         onSubmit={handleEditProperty}
+        onViewProject={() => {
+          setEditingProperty(null);
+          setActiveView("projects");
+        }}
         property={editingProperty}
       />
 
@@ -801,31 +705,6 @@ function DashboardContent() {
       <PermissionsMatrix
         isOpen={isPermissionsOpen}
         onClose={() => setIsPermissionsOpen(false)}
-      />
-
-      <FormBuilder
-        isOpen={isFormBuilderOpen}
-        onClose={() => setIsFormBuilderOpen(false)}
-      />
-
-      <StatusManager
-        isOpen={isStatusesOpen}
-        onClose={() => setIsStatusesOpen(false)}
-      />
-
-      <LeadSourceManager
-        isOpen={isLeadSourcesOpen}
-        onClose={() => setIsLeadSourcesOpen(false)}
-      />
-
-      <NotificationManager
-        isOpen={isNotificationsOpen}
-        onClose={() => setIsNotificationsOpen(false)}
-      />
-
-      <WorkflowBuilder
-        isOpen={isWorkflowsOpen}
-        onClose={() => setIsWorkflowsOpen(false)}
       />
 
       <CompanySettings

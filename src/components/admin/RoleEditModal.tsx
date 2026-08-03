@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Shield, Save, Check } from "lucide-react";
 import { api } from "@/lib/api";
@@ -29,25 +29,7 @@ export function RoleEditModal({ isOpen, onClose, role, onSave }: RoleEditModalPr
     hierarchy_level: 0,
   });
 
-  useEffect(() => {
-    if (isOpen) {
-      loadData();
-      if (role) {
-        setFormData({
-          name: role.name,
-          slug: role.slug,
-          description: role.description,
-          hierarchy_level: role.hierarchy_level,
-        });
-        setSelectedPermissions(new Set(role.permissions.map((p) => p.id)));
-      } else {
-        setFormData({ name: "", slug: "", description: "", hierarchy_level: 0 });
-        setSelectedPermissions(new Set());
-      }
-    }
-  }, [isOpen, role]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
       const [modulesRes, permsRes] = await Promise.all([
@@ -61,7 +43,31 @@ export function RoleEditModal({ isOpen, onClose, role, onSave }: RoleEditModalPr
     } finally {
       setLoading(false);
     }
-  };
+  }, [showToast]);
+
+  useEffect(() => {
+    if (isOpen) {
+      void Promise.resolve().then(() => loadData());
+    }
+  }, [isOpen, loadData]);
+
+  const sessionToken = isOpen ? (role ? role.id : "new") : null;
+  const [lastSession, setLastSession] = useState<string | null>(null);
+  if (sessionToken && lastSession !== sessionToken) {
+    setLastSession(sessionToken);
+    if (role) {
+      setFormData({
+        name: role.name,
+        slug: role.slug,
+        description: role.description,
+        hierarchy_level: role.hierarchy_level,
+      });
+      setSelectedPermissions(new Set(role.permissions.map((p) => p.id)));
+    } else {
+      setFormData({ name: "", slug: "", description: "", hierarchy_level: 0 });
+      setSelectedPermissions(new Set());
+    }
+  }
 
   const togglePermission = (permId: string) => {
     const next = new Set(selectedPermissions);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   X, Save, Type, Hash, Mail, Phone, Calendar, Clock,
@@ -8,18 +8,19 @@ import {
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { useToast } from "@/lib/toast-context";
-import type { FormConfig, FormField, FieldOption } from "@/lib/types";
+import type { FormConfig, FormField, FormData, FormValue } from "@/lib/types";
+import type { LucideIcon } from "lucide-react";
 
 interface DynamicFormRendererProps {
   isOpen: boolean;
   onClose: () => void;
   formId: string;
-  initialData?: Record<string, any>;
-  onSubmit: (data: Record<string, any>) => Promise<void>;
+  initialData?: FormData;
+  onSubmit: (data: FormData) => Promise<void>;
   title?: string;
 }
 
-const FIELD_ICONS: Record<string, any> = {
+const FIELD_ICONS: Record<string, LucideIcon> = {
   text: Type,
   number: Hash,
   email: Mail,
@@ -48,36 +49,10 @@ export function DynamicFormRenderer({
   const [form, setForm] = useState<FormConfig | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [formData, setFormData] = useState<Record<string, any>>({});
+  const [formData, setFormData] = useState<FormData>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  useEffect(() => {
-    if (isOpen && formId) {
-      loadForm();
-    }
-  }, [isOpen, formId]);
-
-  useEffect(() => {
-    if (form) {
-      const defaults: Record<string, any> = {};
-      form.sections.forEach((section) => {
-        section.fields.forEach((field) => {
-          if (initialData[field.label] !== undefined) {
-            defaults[field.id] = initialData[field.label];
-          } else if (field.default_value) {
-            defaults[field.id] = field.default_value;
-          } else if (field.field_type === "checkbox") {
-            defaults[field.id] = false;
-          } else {
-            defaults[field.id] = "";
-          }
-        });
-      });
-      setFormData(defaults);
-    }
-  }, [form, initialData]);
-
-  const loadForm = async () => {
+  const loadForm = useCallback(async () => {
     try {
       setLoading(true);
       const data = await api.get<FormConfig>(`/api/forms/${formId}/render`);
@@ -87,7 +62,34 @@ export function DynamicFormRenderer({
     } finally {
       setLoading(false);
     }
-  };
+  }, [formId, showToast]);
+
+  useEffect(() => {
+    if (isOpen && formId) {
+      void Promise.resolve().then(() => loadForm());
+    }
+  }, [isOpen, formId, loadForm]);
+
+  const [resetFormId, setResetFormId] = useState<string | null>(null);
+
+  if (form && resetFormId !== form.id) {
+    setResetFormId(form.id);
+    const defaults: FormData = {};
+    form.sections.forEach((section) => {
+      section.fields.forEach((field) => {
+        if (initialData[field.label] !== undefined) {
+          defaults[field.id] = initialData[field.label];
+        } else if (field.default_value) {
+          defaults[field.id] = field.default_value;
+        } else if (field.field_type === "checkbox") {
+          defaults[field.id] = false;
+        } else {
+          defaults[field.id] = "";
+        }
+      });
+    });
+    setFormData(defaults);
+  }
 
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -104,14 +106,18 @@ export function DynamicFormRenderer({
         if (formData[field.id] && field.validation_rules) {
           const rules = field.validation_rules;
           const value = String(formData[field.id]);
-          if (rules.pattern && !new RegExp(rules.pattern).test(value)) {
-            newErrors[field.id] = rules.message || `Invalid ${field.label}`;
+          const pattern = typeof rules.pattern === "string" ? rules.pattern : undefined;
+          const message = typeof rules.message === "string" ? rules.message : undefined;
+          const minLength = typeof rules.min_length === "number" ? rules.min_length : Number(rules.min_length);
+          const maxLength = typeof rules.max_length === "number" ? rules.max_length : Number(rules.max_length);
+          if (pattern && !new RegExp(pattern).test(value)) {
+            newErrors[field.id] = message || `Invalid ${field.label}`;
           }
-          if (rules.min_length && value.length < rules.min_length) {
-            newErrors[field.id] = `Minimum ${rules.min_length} characters`;
+          if (Number.isFinite(minLength) && value.length < minLength) {
+            newErrors[field.id] = `Minimum ${minLength} characters`;
           }
-          if (rules.max_length && value.length > rules.max_length) {
-            newErrors[field.id] = `Maximum ${rules.max_length} characters`;
+          if (Number.isFinite(maxLength) && value.length > maxLength) {
+            newErrors[field.id] = `Maximum ${maxLength} characters`;
           }
         }
       });
@@ -130,7 +136,7 @@ export function DynamicFormRenderer({
 
     try {
       setSubmitting(true);
-      const payload: Record<string, any> = {};
+      const payload: FormData = {};
       if (form) {
         form.sections.forEach((section) => {
           section.fields.forEach((field) => {
@@ -150,14 +156,14 @@ export function DynamicFormRenderer({
 
   const renderField = (field: FormField) => {
     const Icon = FIELD_ICONS[field.field_type] || Type;
-    const value = formData[field.id] ?? "";
+    const value = (formData[field.id] ?? "") as string | string[];
     const error = errors[field.id];
 
     const baseInputClass = `w-full pl-10 pr-4 py-2.5 bg-[#F8FAFC] border ${
       error ? "border-red-500" : "border-[#E2E8F0]"
     } rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition-all`;
 
-    const handleChange = (newValue: any) => {
+    const handleChange = (newValue: FormValue) => {
       setFormData({ ...formData, [field.id]: newValue });
       if (errors[field.id]) {
         setErrors({ ...errors, [field.id]: "" });
@@ -252,7 +258,7 @@ export function DynamicFormRenderer({
                     type="radio"
                     name={field.id}
                     value={opt.value}
-                    checked={value === opt.value}
+                    checked={!Array.isArray(value) && value === opt.value}
                     onChange={(e) => handleChange(e.target.value)}
                     disabled={field.is_read_only}
                     className="text-[#2563EB] focus:ring-[#2563EB]"

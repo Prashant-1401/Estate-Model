@@ -1,16 +1,17 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import {
   Users, Calendar, Flame, Building2, FolderTree, DollarSign,
-  TrendingUp, Clock, RefreshCw, Settings,
+  TrendingUp, Clock,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { api } from "@/lib/api";
 import { useToast } from "@/lib/toast-context";
-import type { DashboardStats, Lead, FollowUp, DashboardWidget, UserDashboard } from "@/lib/types";
+import type { DashboardStats, Lead, FollowUp, DashboardWidget } from "@/lib/types";
 
-const WIDGET_ICONS: Record<string, any> = {
+const WIDGET_ICONS: Record<string, LucideIcon> = {
   Users, Calendar, Flame, Building2, FolderTree, DollarSign,
   TrendingUp, Clock,
 };
@@ -56,8 +57,8 @@ function StatWidget({ title, value, icon, color, trend }: StatWidgetProps) {
 interface TableWidgetProps {
   title: string;
   columns: string[];
-  data: any[];
-  renderRow: (item: any, index: number) => React.ReactNode;
+  data: Lead[];
+  renderRow: (item: Lead, index: number) => React.ReactNode;
 }
 
 function TableWidget({ title, columns, data, renderRow }: TableWidgetProps) {
@@ -142,21 +143,15 @@ interface ConfigurableDashboardProps {
 export function ConfigurableDashboard({ stats, onAddLead }: ConfigurableDashboardProps) {
   const { showToast } = useToast();
   const [widgets, setWidgets] = useState<DashboardWidget[]>([]);
-  const [userDashboard, setUserDashboard] = useState<UserDashboard | null>(null);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [followUps, setFollowUps] = useState<FollowUp[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadDashboard();
-  }, []);
-
-  const loadDashboard = async () => {
+  const loadDashboard = useCallback(async () => {
     try {
       setLoading(true);
-      const [widgetsRes, dashboardRes, leadsRes, followUpsRes] = await Promise.allSettled([
+      const [widgetsRes, leadsRes, followUpsRes] = await Promise.allSettled([
         api.get<DashboardWidget[] | { items: DashboardWidget[] }>("/api/dashboard-config/widgets/all"),
-        api.get<UserDashboard>("/api/dashboard-config/my-dashboard"),
         api.get<{ items: Lead[] }>("/api/leads?per_page=10"),
         api.get<{ items: FollowUp[] }>("/api/follow-ups?per_page=10"),
       ]);
@@ -165,7 +160,6 @@ export function ConfigurableDashboard({ stats, onAddLead }: ConfigurableDashboar
         const value = widgetsRes.value;
         setWidgets(Array.isArray(value) ? value : value.items || []);
       }
-      if (dashboardRes.status === "fulfilled") setUserDashboard(dashboardRes.value);
       if (leadsRes.status === "fulfilled") setLeads(leadsRes.value.items || []);
       if (followUpsRes.status === "fulfilled") setFollowUps(followUpsRes.value.items || []);
     } catch {
@@ -173,7 +167,11 @@ export function ConfigurableDashboard({ stats, onAddLead }: ConfigurableDashboar
     } finally {
       setLoading(false);
     }
-  };
+  }, [showToast]);
+
+  useEffect(() => {
+    void Promise.resolve().then(() => loadDashboard());
+  }, [loadDashboard]);
 
   const DEFAULT_STAT_WIDGETS = [
     { title: "Total Leads", value: stats.total_leads, icon: "Users", color: "#3B82F6" },
@@ -199,8 +197,8 @@ export function ConfigurableDashboard({ stats, onAddLead }: ConfigurableDashboar
     .map((w) => ({
       title: w.name,
       value: STAT_VALUES[w.name] ?? 0,
-      icon: w.config?.icon || "Users",
-      color: w.config?.color || "#3B82F6",
+      icon: String(w.config?.icon || "Users"),
+      color: String(w.config?.color || "#3B82F6"),
     }));
   const tableEnabled = widgets.find((w) => w.widget_type === "table")?.is_active ?? true;
   const listEnabled = widgets.find((w) => w.widget_type === "list")?.is_active ?? true;

@@ -1,21 +1,40 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, MapPin, Bed, Bath, Square, Building, IndianRupee, Save, ImagePlus, Trash2 } from "lucide-react";
-import type { Property } from "@/lib/types";
+import { X, MapPin, Bed, Bath, Square, Building, Building2, ExternalLink, IndianRupee, Save, ImagePlus, Trash2 } from "lucide-react";
+import { api } from "@/lib/api";
+import type { Project, Property } from "@/lib/types";
 
 interface EditPropertyCardProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (id: string, property: Property) => void;
+  onViewProject?: (projectId: string) => void;
   property: Property | null;
 }
 
-export function EditPropertyCard({ isOpen, onClose, onSubmit, property }: EditPropertyCardProps) {
+export function EditPropertyCard({ isOpen, onClose, onSubmit, onViewProject, property }: EditPropertyCardProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [formData, setFormData] = useState({ title: property?.title || "", location: property?.location || "", price: property?.price || "", bedrooms: property?.bedrooms?.toString() || "", bathrooms: property?.bathrooms?.toString() || "", area: property?.area || "", type: property?.type || "", status: property?.status || "Available" });
   const [photos, setPhotos] = useState<string[]>(property?.images || []);
+  const [projectId, setProjectId] = useState<string>(property?.project_id || "");
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [projectsLoading, setProjectsLoading] = useState(true);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    api.get<{ items: Project[] }>("/api/projects?per_page=100")
+      .then((res) => setProjects(res.items || []))
+      .catch(() => setProjects([]))
+      .finally(() => setProjectsLoading(false));
+  }, [isOpen]);
+
+  const handleViewProject = () => {
+    if (!projectId) return;
+    onViewProject?.(projectId);
+    onClose();
+  };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -43,6 +62,7 @@ export function EditPropertyCard({ isOpen, onClose, onSubmit, property }: EditPr
       type: formData.type,
       status: formData.status,
       images: photos,
+      project_id: projectId || undefined,
     };
     onSubmit(property.id, updated);
     onClose();
@@ -152,6 +172,28 @@ export function EditPropertyCard({ isOpen, onClose, onSubmit, property }: EditPr
                   <option value="Sold">Sold</option>
                 </select>
               </div>
+              <div className="sm:col-span-2 space-y-1.5">
+                <label className="text-sm font-medium text-[#0F172A]">Linked Project</label>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 text-[#64748B]" size={18} />
+                    <select value={projectId} onChange={(e) => setProjectId(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition-all appearance-none">
+                      <option value="">{projectsLoading ? "Loading projects..." : projects.length === 0 ? "No projects available" : "No project linked"}</option>
+                      {projects.map((p) => (
+                        <option key={p.id} value={p.id}>{p.name}{p.location ? ` — ${p.location}` : ""}</option>
+                      ))}
+                    </select>
+                  </div>
+                  {projectId && (
+                    <button type="button" onClick={handleViewProject}
+                      className="shrink-0 flex items-center gap-1.5 px-3 py-2.5 bg-[#EFF6FF] border border-blue-100 text-[#2563EB] rounded-xl text-sm font-medium hover:bg-[#DBEAFE] transition-colors">
+                      <ExternalLink size={16} />
+                      View Project
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
 
             <div className="space-y-1.5">
@@ -159,6 +201,7 @@ export function EditPropertyCard({ isOpen, onClose, onSubmit, property }: EditPr
               <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
                 {photos.map((photo, i) => (
                   <div key={i} className="relative aspect-[4/3] bg-[#F8FAFC] rounded-xl border border-[#E2E8F0] overflow-hidden group">
+                    {/* eslint-disable-next-line @next/next/no-img-element -- base64 uploads, next/image does not apply */}
                     <img src={photo} alt="" className="w-full h-full object-cover" />
                     <button type="button" onClick={() => setPhotos((prev) => prev.filter((_, j) => j !== i))}
                       className="absolute top-1 right-1 p-1.5 bg-black/50 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500/80">

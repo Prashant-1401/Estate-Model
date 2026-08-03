@@ -1,17 +1,17 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, FormInput, FileText } from "lucide-react";
 import { api } from "@/lib/api";
 import { useToast } from "@/lib/toast-context";
 import { DynamicFormRenderer } from "./DynamicFormRenderer";
-import type { FormConfig } from "@/lib/types";
+import type { FormConfig, FormData } from "@/lib/types";
 
 interface DynamicLeadFormProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: Record<string, any>) => Promise<void>;
+  onSubmit: (data: FormData) => Promise<void>;
 }
 
 export function DynamicLeadForm({ isOpen, onClose, onSubmit }: DynamicLeadFormProps) {
@@ -20,13 +20,7 @@ export function DynamicLeadForm({ isOpen, onClose, onSubmit }: DynamicLeadFormPr
   const [selectedFormId, setSelectedFormId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (isOpen) {
-      loadForms();
-    }
-  }, [isOpen]);
-
-  const loadForms = async () => {
+  const loadForms = useCallback(async () => {
     try {
       setLoading(true);
       const res = await api.get<{ items: FormConfig[] }>("/api/forms/all?entity_type=lead");
@@ -39,7 +33,13 @@ export function DynamicLeadForm({ isOpen, onClose, onSubmit }: DynamicLeadFormPr
     } finally {
       setLoading(false);
     }
-  };
+  }, [showToast]);
+
+  useEffect(() => {
+    if (isOpen) {
+      void Promise.resolve().then(() => loadForms());
+    }
+  }, [isOpen, loadForms]);
 
   if (!isOpen) return null;
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, GitBranch, Plus, Edit2, Trash2, ChevronUp, ChevronDown, ArrowRight, Mail, MessageSquare, Bell, Clock, UserCheck, Filter, ToggleLeft, ToggleRight } from "lucide-react";
 import { api } from "@/lib/api";
@@ -10,6 +10,7 @@ import type { Workflow } from "@/lib/types";
 interface WorkflowBuilderProps {
   isOpen: boolean;
   onClose: () => void;
+  embedded?: boolean;
 }
 
 const STEP_TYPES = [
@@ -30,7 +31,7 @@ const TRIGGER_EVENTS = [
   { value: "lead_assigned", label: "Lead Assigned" },
 ];
 
-export function WorkflowBuilder({ isOpen, onClose }: WorkflowBuilderProps) {
+export function WorkflowBuilder({ isOpen, onClose, embedded = false }: WorkflowBuilderProps) {
   const { showToast } = useToast();
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -45,11 +46,7 @@ export function WorkflowBuilder({ isOpen, onClose }: WorkflowBuilderProps) {
     steps: [] as Workflow["steps"],
   });
 
-  useEffect(() => {
-    if (isOpen) loadWorkflows();
-  }, [isOpen]);
-
-  const loadWorkflows = async () => {
+  const loadWorkflows = useCallback(async () => {
     try {
       setLoading(true);
       const res = await api.get<{ items: Workflow[] }>("/api/workflows?per_page=100");
@@ -59,7 +56,11 @@ export function WorkflowBuilder({ isOpen, onClose }: WorkflowBuilderProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [showToast]);
+
+  useEffect(() => {
+    if (isOpen) void Promise.resolve().then(() => loadWorkflows());
+  }, [isOpen, loadWorkflows]);
 
   const handleSave = async () => {
     if (!formData.name.trim()) {
@@ -176,7 +177,7 @@ export function WorkflowBuilder({ isOpen, onClose }: WorkflowBuilderProps) {
     setFormData({ ...formData, steps: newSteps });
   };
 
-  if (!isOpen) return null;
+  if (!isOpen && !embedded) return null;
 
   return (
     <AnimatePresence>
@@ -184,15 +185,15 @@ export function WorkflowBuilder({ isOpen, onClose }: WorkflowBuilderProps) {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-0 sm:p-4"
-        onClick={onClose}
+        className={embedded ? "flex flex-col h-full" : "fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-0 sm:p-4"}
+        onClick={embedded ? undefined : onClose}
       >
         <motion.div
           initial={{ scale: 0.95, opacity: 0, y: 20 }}
           animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.95, opacity: 0, y: 20 }}
           onClick={(e) => e.stopPropagation()}
-          className="bg-white rounded-none sm:rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col"
+          className={embedded ? "bg-white w-full h-full flex flex-col" : "bg-white rounded-none sm:rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col"}
         >
           <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-[#E2E8F0] shrink-0">
             <div className="flex items-center gap-3">
@@ -216,9 +217,11 @@ export function WorkflowBuilder({ isOpen, onClose }: WorkflowBuilderProps) {
                 <Plus size={16} />
                 <span className="hidden sm:inline">New Workflow</span>
               </button>
-              <button onClick={onClose} className="p-2 hover:bg-[#F8FAFC] rounded-xl transition-colors">
-                <X size={20} className="text-[#64748B]" />
-              </button>
+              {!embedded && (
+                <button onClick={onClose} className="p-2 hover:bg-[#F8FAFC] rounded-xl transition-colors">
+                  <X size={20} className="text-[#64748B]" />
+                </button>
+              )}
             </div>
           </div>
 
@@ -296,7 +299,6 @@ export function WorkflowBuilder({ isOpen, onClose }: WorkflowBuilderProps) {
                   ) : (
                     <div className="space-y-2">
                       {formData.steps.map((step, index) => {
-                        const StepIcon = STEP_TYPES.find((s) => s.value === step.step_type)?.icon || Bell;
                         return (
                           <div key={index} className="flex items-start gap-2 p-3 bg-white border border-[#E2E8F0] rounded-xl">
                             <div className="flex flex-col items-center gap-1 pt-1">

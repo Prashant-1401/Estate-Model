@@ -16,6 +16,7 @@ from app.schemas.form import (
     FormSectionRead,
     FormFieldCreate,
     FormFieldRead,
+    FieldOptionRead,
     FormUpdate,
 )
 from app.schemas.common import Page

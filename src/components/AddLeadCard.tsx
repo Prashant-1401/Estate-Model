@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, User, Phone, Mail, IndianRupee, MapPin, Building, Tag, Save } from "lucide-react";
+import { X, User, Phone, Mail, IndianRupee, MapPin, Building, Tag, Save, UserPlus } from "lucide-react";
 import { useToast } from "@/lib/toast-context";
+import { api } from "@/lib/api";
+import type { UserData } from "@/lib/types";
 
 interface AddLeadCardProps {
   isOpen: boolean;
@@ -27,6 +29,23 @@ export function AddLeadCard({ isOpen, onClose, onSubmit }: AddLeadCardProps) {
 
   const [errors, setErrors] = useState<{ name?: string; phone?: string; budget?: string }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [agents, setAgents] = useState<UserData[]>([]);
+  const [assignedTo, setAssignedTo] = useState("");
+
+  const loadAgents = useCallback(async () => {
+    try {
+      const data = await api.get<UserData[]>("/api/users/agents");
+      setAgents(data);
+    } catch {
+      // Not an admin/manager, or the request failed — dropdown just shows "Unassigned"
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isOpen) {
+      void Promise.resolve().then(() => loadAgents());
+    }
+  }, [isOpen, loadAgents]);
 
   const validate = () => {
     const newErrors: { name?: string; phone?: string; budget?: string } = {};
@@ -67,7 +86,11 @@ export function AddLeadCard({ isOpen, onClose, onSubmit }: AddLeadCardProps) {
 
     setIsSubmitting(true);
     try {
-      await onSubmit(formData);
+      await onSubmit({
+        ...formData,
+        assigned: agents.find((a) => a.id === assignedTo)?.name ?? "Unassigned",
+        assignedTo,
+      });
       onClose();
       setFormData({
         name: "",
@@ -79,6 +102,7 @@ export function AddLeadCard({ isOpen, onClose, onSubmit }: AddLeadCardProps) {
         source: "",
         notes: "",
       });
+      setAssignedTo("");
       setErrors({});
     } catch {
       // Error is already shown by parent via showToast
@@ -262,6 +286,27 @@ export function AddLeadCard({ isOpen, onClose, onSubmit }: AddLeadCardProps) {
                   <option value="walk-in">Walk-in</option>
                 </select>
               </div>
+            </div>
+
+            {/* Assign To */}
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-[#0F172A]">Assign To</label>
+              <div className="relative">
+                <UserPlus className="absolute left-3 top-1/2 -translate-y-1/2 text-[#64748B]" size={18} />
+                <select
+                  value={assignedTo}
+                  onChange={(e) => setAssignedTo(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition-all appearance-none"
+                >
+                  <option value="">Unassigned</option>
+                  {agents.map((agent) => (
+                    <option key={agent.id} value={agent.id}>{agent.name}</option>
+                  ))}
+                </select>
+              </div>
+              {agents.length === 0 && (
+                <p className="text-xs text-[#94A3B8]">No active agents available</p>
+              )}
             </div>
 
             {/* Notes */}

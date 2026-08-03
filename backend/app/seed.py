@@ -169,7 +169,7 @@ async def seed_permissions(db):
                 if role_slug == "read_only" and action != "view":
                     continue
 
-                rp_id = f"RP-{int(time.time() * 1000)}-{perm_count}"
+                rp_id = f"RP-{int(time.time() * 1000)}-{perm_count}-{role_slug}"
                 rp = RolePermission(
                     id=rp_id,
                     role_id=role_id,

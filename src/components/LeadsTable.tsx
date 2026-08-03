@@ -142,7 +142,7 @@ export function LeadsTable({
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-[#E2E8F0] bg-[#F8FAFC]/50">
-                {["Lead ID", "Customer Name", "Phone", "Budget", "Preferred Area", "Status", "Assigned To", "Actions"].map((head) => (
+                {["Lead ID", "Customer Name", "Phone", "Budget", "Preferred Area", "Date", "Status", "Assigned To", "Actions"].map((head) => (
                   <th key={head} className="px-6 py-4 text-xs font-semibold text-[#64748B] uppercase tracking-wider">{head}</th>
                 ))}
               </tr>
@@ -150,13 +150,13 @@ export function LeadsTable({
             <tbody className="divide-y divide-[#E2E8F0]">
               {loading && items.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-6 py-16 text-center">
+                  <td colSpan={9} className="px-6 py-16 text-center">
                     <div className="w-8 h-8 border-2 border-[#2563EB] border-t-transparent rounded-full animate-spin mx-auto" />
                   </td>
                 </tr>
               ) : items.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-6 py-16 text-center text-[#64748B] text-sm">
+                  <td colSpan={9} className="px-6 py-16 text-center text-[#64748B] text-sm">
                     {search || statusFilter ? "No leads match your filters." : "No leads yet."}
                   </td>
                 </tr>
@@ -182,6 +182,7 @@ export function LeadsTable({
                     <td className="px-6 py-4 text-sm text-[#64748B]">{lead.phone}</td>
                     <td className="px-6 py-4 text-sm text-[#0F172A] font-medium">{lead.budget}</td>
                     <td className="px-6 py-4 text-sm text-[#64748B]">{lead.area}</td>
+                    <td className="px-6 py-4 text-sm text-[#64748B]">{lead.date || "—"}</td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${statusColors[lead.status]}`}>
                         {lead.status}
@@ -190,8 +191,8 @@ export function LeadsTable({
                     <td className="px-6 py-4 text-sm text-[#64748B]">{lead.assigned}</td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button className="p-2 text-[#22C55E] hover:bg-green-50 rounded-lg transition-colors" title="WhatsApp"><MessageCircle size={16} /></button>
-                        <button className="p-2 text-[#2563EB] hover:bg-blue-50 rounded-lg transition-colors" title="Call"><Phone size={16} /></button>
+                        <a href={`https://wa.me/${lead.phone.replace(/\D/g, "")}?text=${encodeURIComponent(`Hello ${lead.name}!`)}`} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="p-2 text-[#22C55E] hover:bg-green-50 rounded-lg transition-colors" title="WhatsApp"><MessageCircle size={16} /></a>
+                        <a href={`tel:${lead.phone.replace(/\s+/g, "")}`} onClick={(e) => e.stopPropagation()} className="p-2 text-[#2563EB] hover:bg-blue-50 rounded-lg transition-colors" title="Call"><Phone size={16} /></a>
                         {onEdit && <button onClick={(e) => { e.stopPropagation(); onEdit(lead); }} className="p-2 text-[#2563EB] hover:bg-blue-50 rounded-lg transition-colors" title="Edit"><Edit2 size={16} /></button>}
                         {onDelete && <button onClick={(e) => { e.stopPropagation(); onDelete(lead.id); }} className="p-2 text-[#EF4444] hover:bg-red-50 rounded-lg transition-colors" title="Delete"><Trash2 size={16} /></button>}
                       </div>
@@ -262,15 +263,19 @@ export function LeadsTable({
                   <span className="font-medium">Area:</span>
                   <span>{lead.area}</span>
                 </div>
+                <div className="flex items-center gap-2 text-sm text-[#64748B]">
+                  <span className="font-medium">Date:</span>
+                  <span>{lead.date || "—"}</span>
+                </div>
               </div>
 
               <div className="flex gap-2 pt-3 border-t border-[#E2E8F0]">
-                <button className="flex-1 flex items-center justify-center gap-2 py-2 bg-[#22C55E] text-white rounded-xl text-sm font-medium">
+                <a href={`https://wa.me/${lead.phone.replace(/\D/g, "")}?text=${encodeURIComponent(`Hello ${lead.name}!`)}`} target="_blank" rel="noopener noreferrer" className="flex-1 flex items-center justify-center gap-2 py-2 bg-[#22C55E] text-white rounded-xl text-sm font-medium">
                   <MessageCircle size={16} /> WhatsApp
-                </button>
-                <button className="flex-1 flex items-center justify-center gap-2 py-2 bg-[#2563EB] text-white rounded-xl text-sm font-medium">
+                </a>
+                <a href={`tel:${lead.phone.replace(/\s+/g, "")}`} className="flex-1 flex items-center justify-center gap-2 py-2 bg-[#2563EB] text-white rounded-xl text-sm font-medium">
                   <Phone size={16} /> Call
-                </button>
+                </a>
                 {onViewCustomer && (
                   <button onClick={() => onViewCustomer(lead)} className="px-3 py-2 border border-[#E2E8F0] rounded-xl text-sm text-[#2563EB] font-medium hover:bg-[#F8FAFC] transition-colors">
                     View

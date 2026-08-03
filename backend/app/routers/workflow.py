@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.models.workflow import Workflow
 from app.models.workflow_step import WorkflowStep
-from app.schemas.workflow import WorkflowCreate, WorkflowRead, WorkflowUpdate
+from app.schemas.workflow import WorkflowCreate, WorkflowRead, WorkflowUpdate, WorkflowStepRead
 from app.schemas.common import Page
 from app.pagination import paginate
 from app.auth import require_role

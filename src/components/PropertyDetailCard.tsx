@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, MapPin, Bed, Bath, Square, Heart, Share2, ChevronLeft, ChevronRight, Image, Phone, MessageCircle } from "lucide-react";
-import type { Property } from "@/lib/types";
+  import { X, MapPin, Bed, Bath, Square, Heart, Share2, ChevronLeft, ChevronRight, Image as ImageIcon, Phone, MessageCircle } from "lucide-react";
+import type { Property, Company } from "@/lib/types";
+import { api } from "@/lib/api";
 
 interface PropertyDetailCardProps {
   property: Property | null;
@@ -20,6 +21,20 @@ const statusColors: Record<string, string> = {
 export function PropertyDetailCard({ property, isOpen, onClose }: PropertyDetailCardProps) {
   const [currentImage, setCurrentImage] = useState(0);
   const [isLiked, setIsLiked] = useState(false);
+  const [companyPhone, setCompanyPhone] = useState("");
+
+  const loadCompany = useCallback(async () => {
+    try {
+      const res = await api.get<Company>("/api/company");
+      setCompanyPhone(res.phone || "");
+    } catch {
+      // No company configured — leave phone empty
+    }
+  }, []);
+
+  useEffect(() => {
+    void Promise.resolve().then(() => loadCompany());
+  }, [loadCompany]);
 
   if (!property) return null;
 
@@ -64,6 +79,7 @@ export function PropertyDetailCard({ property, isOpen, onClose }: PropertyDetail
                   <div className="relative h-64 sm:h-80 lg:h-[400px] bg-[#F8FAFC]">
                     {property.images.length > 0 ? (
                       <>
+                        {/* eslint-disable-next-line @next/next/no-img-element -- base64 uploads, next/image does not apply */}
                         <img
                           src={property.images[currentImage]}
                           alt={property.title}
@@ -92,7 +108,7 @@ export function PropertyDetailCard({ property, isOpen, onClose }: PropertyDetail
                       </>
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
-                        <Image size={64} className="text-slate-300" />
+                        <ImageIcon size={64} className="text-slate-300" />
                       </div>
                     )}
                   </div>
@@ -104,6 +120,7 @@ export function PropertyDetailCard({ property, isOpen, onClose }: PropertyDetail
                           className={`shrink-0 w-16 h-12 rounded-lg overflow-hidden border-2 transition-all ${
                             i === currentImage ? "border-[#2563EB] opacity-100" : "border-transparent opacity-60 hover:opacity-100"
                           }`}>
+                          {/* eslint-disable-next-line @next/next/no-img-element -- base64 uploads, next/image does not apply */}
                           <img src={img} alt="" className="w-full h-full object-cover" />
                         </button>
                       ))}
@@ -173,14 +190,24 @@ export function PropertyDetailCard({ property, isOpen, onClose }: PropertyDetail
                   </div>
 
                   <div className="flex gap-2 pt-2">
-                    <button className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-[#22C55E] text-white rounded-xl text-sm font-medium hover:bg-green-600 transition-colors">
+                    <a
+                      href={companyPhone ? `https://wa.me/${companyPhone.replace(/\D/g, "")}?text=${encodeURIComponent(`Hello! I'm interested in ${property.title} (${property.id}).`)}` : undefined}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title={companyPhone ? "Chat on WhatsApp" : "No company phone configured"}
+                      className={`flex-1 flex items-center justify-center gap-2 py-2.5 bg-[#22C55E] text-white rounded-xl text-sm font-medium hover:bg-green-600 transition-colors ${companyPhone ? "" : "opacity-50 pointer-events-none cursor-not-allowed"}`}
+                    >
                       <MessageCircle size={18} />
                       WhatsApp
-                    </button>
-                    <button className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-[#2563EB] text-white rounded-xl text-sm font-medium hover:bg-[#1D4ED8] shadow-lg shadow-blue-500/20 transition-all">
+                    </a>
+                    <a
+                      href={companyPhone ? `tel:${companyPhone.replace(/\s+/g, "")}` : undefined}
+                      title={companyPhone ? "Call company" : "No company phone configured"}
+                      className={`flex-1 flex items-center justify-center gap-2 py-2.5 bg-[#2563EB] text-white rounded-xl text-sm font-medium hover:bg-[#1D4ED8] shadow-lg shadow-blue-500/20 transition-all ${companyPhone ? "" : "opacity-50 pointer-events-none cursor-not-allowed"}`}
+                    >
                       <Phone size={18} />
                       Call
-                    </button>
+                    </a>
                   </div>
                 </div>
               </div>

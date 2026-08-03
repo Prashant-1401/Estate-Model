@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { MapPin, Bed, Bath, Square, Edit2, Trash2, ChevronLeft, ChevronRight, Image } from "lucide-react";
+  import { MapPin, Bed, Bath, Square, Edit2, Trash2, ChevronLeft, ChevronRight, Image as ImageIcon, Building2 } from "lucide-react";
 import { useState } from "react";
 
 interface PropertyCardProps {
@@ -16,9 +16,12 @@ interface PropertyCardProps {
   status: "Available" | "Reserved" | "Sold";
   images: string[];
   featured?: boolean;
+  projectId?: string;
+  projects?: { id: string; name: string }[];
   onViewDetails?: (id: string) => void;
   onEdit?: (id: string) => void;
   onDelete?: (id: string) => void;
+  onLinkProject?: (id: string, projectId: string) => void;
 }
 
 export function PropertyCard({
@@ -33,9 +36,12 @@ export function PropertyCard({
   status,
   images,
   featured = false,
+  projectId,
+  projects = [],
   onViewDetails,
   onEdit,
   onDelete,
+  onLinkProject,
 }: PropertyCardProps) {
   const [currentImage, setCurrentImage] = useState(0);
 
@@ -68,6 +74,7 @@ export function PropertyCard({
       <div className="relative h-48 overflow-hidden">
         {images.length > 0 ? (
           <>
+            {/* eslint-disable-next-line @next/next/no-img-element -- base64 uploads, next/image does not apply */}
             <img
               src={images[currentImage]}
               alt={title}
@@ -96,7 +103,7 @@ export function PropertyCard({
           </>
         ) : (
           <div className="w-full h-full bg-gradient-to-br from-slate-200 to-slate-300 flex items-center justify-center">
-            <Image size={40} className="text-slate-400" />
+            <ImageIcon size={40} className="text-slate-400" />
           </div>
         )}
 
@@ -161,6 +168,25 @@ export function PropertyCard({
             <span className="hidden sm:inline">sqft</span>
           </div>
         </div>
+
+        {onLinkProject && (
+          <div className="mt-3">
+            <div className="flex items-center gap-2">
+              <Building2 size={14} className="text-[#64748B] shrink-0" />
+              <select
+                value={projectId || ""}
+                onClick={(e) => e.stopPropagation()}
+                onChange={(e) => { e.stopPropagation(); onLinkProject(id, e.target.value); }}
+                className="w-full px-2 py-1.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg text-xs text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition-all appearance-none"
+              >
+                <option value="">{projectId && !projects.some((p) => p.id === projectId) ? `Linked: ${projectId}` : "Link to project…"}</option>
+                {projects.map((p) => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        )}
 
         <div className="mt-3 flex items-center justify-between">
           <span className="text-xs font-medium px-2.5 py-1.5 bg-[#F8FAFC] text-[#64748B] rounded-lg border border-[#E2E8F0]">
