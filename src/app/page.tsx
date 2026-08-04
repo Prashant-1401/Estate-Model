@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { api } from "@/lib/api";
 import { useToast } from "@/lib/toast-context";
 import { usePaginatedData } from "@/lib/use-paginated-data";
+import { useDropdownOptions } from "@/lib/dropdowns";
+import { statusBadgeStyle } from "@/lib/statuses";
 import { exportLeadsToCSV, exportUsersToCSV, exportDashboardStatsToCSV } from "@/lib/export";
 import { DashboardLayout } from "@/components/Layout";
 import { ConfigurableDashboard } from "@/components/dashboard/ConfigurableDashboard";
@@ -35,6 +37,11 @@ const EMPTY_STATS: DashboardStats = {
 function DashboardContent() {
   const { hasRole } = useAuth();
   const { showToast } = useToast();
+  const { options: projectStatusOptions } = useDropdownOptions("project_status");
+  const projectStatusColorMap = useMemo(
+    () => Object.fromEntries(projectStatusOptions.map((o) => [o.value, o.color])),
+    [projectStatusOptions]
+  );
   const [activeView, setActiveView] = useState("dashboard");
   const [loading, setLoading] = useState(true);
   const [dynamicForm, setDynamicForm] = useState<{ entityType: FormEntityType } | null>(null);
@@ -526,12 +533,7 @@ onAddLead={() => setDynamicForm({ entityType: "lead" })}
                           <td className="px-6 py-4 text-sm text-[#64748B]">{project.developer}</td>
                           <td className="px-6 py-4 text-sm text-[#64748B]">{project.location}</td>
                           <td className="px-6 py-4">
-                            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
-                              project.status === "Completed" ? "bg-green-50 text-[#22C55E] border border-green-100" :
-                              project.status === "Under Construction" ? "bg-blue-50 text-[#2563EB] border border-blue-100" :
-                              project.status === "On Hold" ? "bg-amber-50 text-[#F59E0B] border border-amber-100" :
-                              "bg-slate-50 text-[#64748B] border border-slate-100"
-                            }`}>
+                            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border" style={statusBadgeStyle(projectStatusColorMap[project.status])}>
                               {project.status}
                             </span>
                           </td>

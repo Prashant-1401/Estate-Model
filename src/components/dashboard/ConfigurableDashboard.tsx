@@ -1,15 +1,16 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { motion } from "framer-motion";
 import {
   Users, Calendar, Flame, Building2, FolderTree, DollarSign,
-  TrendingUp, Clock,
+  TrendingUp, Clock, Download,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { api } from "@/lib/api";
 import { useToast } from "@/lib/toast-context";
 import type { DashboardStats, Lead, FollowUp, DashboardWidget } from "@/lib/types";
+import { useLeadStatuses, statusBadgeStyle } from "@/lib/statuses";
 
 const WIDGET_ICONS: Record<string, LucideIcon> = {
   Users, Calendar, Flame, Building2, FolderTree, DollarSign,
@@ -138,10 +139,16 @@ function ListWidget({ title, items }: ListWidgetProps) {
 interface ConfigurableDashboardProps {
   stats: DashboardStats;
   onAddLead: () => void;
+  onExport?: (stats: DashboardStats) => void;
 }
 
-export function ConfigurableDashboard({ stats, onAddLead }: ConfigurableDashboardProps) {
+export function ConfigurableDashboard({ stats, onAddLead, onExport }: ConfigurableDashboardProps) {
   const { showToast } = useToast();
+  const { statuses } = useLeadStatuses();
+  const statusColorMap = useMemo(
+    () => Object.fromEntries(statuses.map((s) => [s.name, s.color])),
+    [statuses]
+  );
   const [widgets, setWidgets] = useState<DashboardWidget[]>([]);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [followUps, setFollowUps] = useState<FollowUp[]>([]);
@@ -219,12 +226,19 @@ export function ConfigurableDashboard({ stats, onAddLead }: ConfigurableDashboar
           <h1 className="text-2xl font-semibold text-[#0F172A]">Dashboard</h1>
           <p className="text-[#64748B] mt-1 text-sm">Welcome back! Here&apos;s what&apos;s happening.</p>
         </div>
-        <button
-          onClick={onAddLead}
-          className="flex items-center gap-2 px-4 py-2 bg-[#2563EB] text-white rounded-xl text-sm font-medium hover:bg-[#1D4ED8] shadow-lg shadow-blue-500/20 transition-all"
-        >
-          Add New Lead
-        </button>
+        <div className="flex gap-2">
+          {onExport && (
+            <button onClick={() => onExport(stats)} className="flex items-center gap-2 px-4 py-2 bg-white border border-[#E2E8F0] rounded-xl text-sm font-medium text-[#0F172A] hover:bg-[#F8FAFC] transition-colors">
+              <Download size={16} className="hidden sm:block" /> <span className="sm:hidden">Export</span><span className="hidden sm:inline">Export</span>
+            </button>
+          )}
+          <button
+            onClick={onAddLead}
+            className="flex items-center gap-2 px-4 py-2 bg-[#2563EB] text-white rounded-xl text-sm font-medium hover:bg-[#1D4ED8] shadow-lg shadow-blue-500/20 transition-all"
+          >
+            Add New Lead
+          </button>
+        </div>
       </div>
 
       {/* Stat Cards */}
@@ -269,12 +283,7 @@ export function ConfigurableDashboard({ stats, onAddLead }: ConfigurableDashboar
                 <td className="px-6 py-4 text-sm font-medium text-[#0F172A]">{lead.name}</td>
                 <td className="px-6 py-4 text-sm text-[#64748B]">{lead.phone}</td>
                 <td className="px-6 py-4">
-                  <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
-                    lead.status === "Hot" ? "bg-red-50 text-red-600 border border-red-100" :
-                    lead.status === "Warm" ? "bg-amber-50 text-amber-600 border border-amber-100" :
-                    lead.status === "Cold" ? "bg-slate-50 text-slate-600 border border-slate-100" :
-                    "bg-blue-50 text-blue-600 border border-blue-100"
-                  }`}>
+                  <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border" style={statusBadgeStyle(statusColorMap[lead.status])}>
                     {lead.status}
                   </span>
                 </td>

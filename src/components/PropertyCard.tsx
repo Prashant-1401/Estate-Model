@@ -3,6 +3,8 @@
 import { motion } from "framer-motion";
   import { MapPin, Bed, Bath, Square, Edit2, Trash2, ChevronLeft, ChevronRight, Image as ImageIcon, Building2 } from "lucide-react";
 import { useState } from "react";
+import { useDropdownOptions } from "@/lib/dropdowns";
+import { statusBadgeStyle } from "@/lib/statuses";
 
 interface PropertyCardProps {
   id: string;
@@ -44,12 +46,10 @@ export function PropertyCard({
   onLinkProject,
 }: PropertyCardProps) {
   const [currentImage, setCurrentImage] = useState(0);
-
-  const statusColors = {
-    Available: "bg-[#22C55E] text-white",
-    Reserved: "bg-[#F59E0B] text-white",
-    Sold: "bg-[#EF4444] text-white",
-  };
+  const { options: propertyStatusOptions } = useDropdownOptions("property_status");
+  const statusColorMap = Object.fromEntries(
+    propertyStatusOptions.map((o) => [o.value, o.color])
+  );
 
   const prevImage = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -109,7 +109,7 @@ export function PropertyCard({
 
         {/* Status Badge */}
         <div className="absolute top-3 left-3">
-          <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${statusColors[status]}`}>
+          <span className="px-2.5 py-1 rounded-full text-xs font-semibold border" style={statusBadgeStyle(statusColorMap[status])}>
             {status}
           </span>
         </div>

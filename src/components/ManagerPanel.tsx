@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useMemo, useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { Users, UserPlus, Search, ChevronDown, Check, Phone, IndianRupee, MapPin } from "lucide-react";
 import type { Lead, UserData } from "@/lib/types";
 import { api } from "@/lib/api";
 import { useToast } from "@/lib/toast-context";
+import { useLeadStatuses, statusBadgeStyle } from "@/lib/statuses";
 
 interface ManagerPanelProps {
   leads: Lead[];
@@ -19,6 +20,11 @@ export function ManagerPanel({ leads, onRefreshLeads }: ManagerPanelProps) {
   const [statusFilter, setStatusFilter] = useState("");
   const [assigningLead, setAssigningLead] = useState<Lead | null>(null);
   const [assigningLoading, setAssigningLoading] = useState(false);
+  const { statuses } = useLeadStatuses();
+  const statusColorMap = useMemo(
+    () => Object.fromEntries(statuses.map((s) => [s.name, s.color])),
+    [statuses]
+  );
 
   const loadAgents = useCallback(async () => {
     try {
@@ -142,8 +148,8 @@ export function ManagerPanel({ leads, onRefreshLeads }: ManagerPanelProps) {
             className="w-full pl-9 pr-4 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB]"
           />
         </div>
-        <div className="flex gap-2">
-          {["", "Hot", "Warm", "New", "Cold"].map((status) => (
+        <div className="flex gap-2 flex-wrap">
+          {["", ...statuses.map((s) => s.name)].map((status) => (
             <button
               key={status}
               onClick={() => setStatusFilter(status)}
@@ -193,6 +199,7 @@ export function ManagerPanel({ leads, onRefreshLeads }: ManagerPanelProps) {
               <LeadCard
                 key={lead.id}
                 lead={lead}
+                statusColorMap={statusColorMap}
                 onAssign={() => setAssigningLead(lead)}
               />
             ))}
@@ -236,12 +243,7 @@ export function ManagerPanel({ leads, onRefreshLeads }: ManagerPanelProps) {
                       <td className="px-6 py-4 text-sm font-medium text-[#0F172A]">{lead.budget}</td>
                       <td className="px-6 py-4 text-sm text-[#64748B]">{lead.area}</td>
                       <td className="px-6 py-4">
-                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
-                          lead.status === "Hot" ? "bg-red-50 text-[#EF4444] border border-red-100" :
-                          lead.status === "Warm" ? "bg-amber-50 text-[#F59E0B] border border-amber-100" :
-                          lead.status === "New" ? "bg-blue-50 text-[#2563EB] border border-blue-100" :
-                          "bg-slate-50 text-[#64748B] border border-slate-100"
-                        }`}>
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border" style={statusBadgeStyle(statusColorMap[lead.status])}>
                           {lead.status}
                         </span>
                       </td>
@@ -313,7 +315,7 @@ export function ManagerPanel({ leads, onRefreshLeads }: ManagerPanelProps) {
   );
 }
 
-function LeadCard({ lead, onAssign }: { lead: Lead; onAssign: () => void }) {
+function LeadCard({ lead, statusColorMap, onAssign }: { lead: Lead; statusColorMap: Record<string, string>; onAssign: () => void }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -330,12 +332,7 @@ function LeadCard({ lead, onAssign }: { lead: Lead; onAssign: () => void }) {
             <p className="text-xs text-[#64748B]">{lead.id}</p>
           </div>
         </div>
-        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
-          lead.status === "Hot" ? "bg-red-50 text-[#EF4444] border border-red-100" :
-          lead.status === "Warm" ? "bg-amber-50 text-[#F59E0B] border border-amber-100" :
-          lead.status === "New" ? "bg-blue-50 text-[#2563EB] border border-blue-100" :
-          "bg-slate-50 text-[#64748B] border border-slate-100"
-        }`}>
+        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border" style={statusBadgeStyle(statusColorMap[lead.status])}>
           {lead.status}
         </span>
       </div>

@@ -1,10 +1,11 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { TrendingUp, TrendingDown, Users, CalendarCheck, IndianRupee } from "lucide-react";
+import { TrendingUp, TrendingDown, Users, CalendarCheck, IndianRupee, Download } from "lucide-react";
 import type { DashboardStats } from "@/lib/types";
+import { exportDashboardStatsToCSV } from "@/lib/export";
 
-export function DashboardView({ stats, onAddLead }: { stats: DashboardStats; onAddLead: () => void }) {
+export function DashboardView({ stats, onAddLead, onExport }: { stats: DashboardStats; onAddLead: () => void; onExport?: (stats: DashboardStats) => void }) {
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -14,8 +15,8 @@ export function DashboardView({ stats, onAddLead }: { stats: DashboardStats; onA
           <p className="text-[#64748B] mt-1 text-sm">Welcome back. Here&apos;s what&apos;s happening today.</p>
         </div>
         <div className="flex gap-2">
-          <button className="px-4 py-2 bg-white border border-[#E2E8F0] rounded-xl text-sm font-medium text-[#0F172A] hover:bg-[#F8FAFC] transition-colors">
-            Export
+          <button onClick={() => onExport?.(stats)} className="px-4 py-2 bg-white border border-[#E2E8F0] rounded-xl text-sm font-medium text-[#0F172A] hover:bg-[#F8FAFC] transition-colors">
+            <Download size={16} className="inline-block mr-1" /> Export
           </button>
           <button onClick={onAddLead} className="px-4 py-2 bg-[#2563EB] text-white rounded-xl text-sm font-medium hover:bg-[#1D4ED8] shadow-lg shadow-blue-500/20 transition-all">
             + Add Lead

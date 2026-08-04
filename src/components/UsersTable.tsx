@@ -4,6 +4,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { Search, Download, MoreHorizontal, Shield, UserCheck, UserX, AlertTriangle, RefreshCw } from "lucide-react";
 import { Pagination } from "@/components/Pagination";
+import { exportUsersToCSV } from "@/lib/export";
 
 interface UserData {
   id: string;
@@ -32,6 +33,7 @@ interface UsersTableProps {
   onAddUser: () => void;
   onUpdateRole?: (id: string, role: string) => void;
   onToggleStatus?: (id: string, currentStatus: string) => void;
+  onExport?: (users: UserData[]) => void;
 }
 
 const roleColors: Record<string, string> = {
@@ -58,6 +60,7 @@ export function UsersTable({
   onAddUser,
   onUpdateRole,
   onToggleStatus,
+  onExport,
 }: UsersTableProps) {
   const [openMenu, setOpenMenu] = useState<string | null>(null);
 
@@ -72,7 +75,7 @@ export function UsersTable({
           <p className="text-[#64748B] mt-1 text-sm">Manage team members and their access.</p>
         </div>
         <div className="flex gap-2">
-          <button className="flex items-center gap-2 px-4 py-2 bg-white border border-[#E2E8F0] rounded-xl text-sm font-medium text-[#0F172A] hover:bg-[#F8FAFC] transition-colors">
+          <button onClick={() => onExport?.(items)} className="flex items-center gap-2 px-4 py-2 bg-white border border-[#E2E8F0] rounded-xl text-sm font-medium text-[#0F172A] hover:bg-[#F8FAFC] transition-colors">
             <Download size={16} className="hidden sm:block" /> <span className="sm:hidden">Export</span><span className="hidden sm:inline">Export</span>
           </button>
           <button onClick={onAddUser} className="flex items-center gap-2 px-4 py-2 bg-[#2563EB] text-white rounded-xl text-sm font-medium hover:bg-[#1D4ED8] shadow-lg shadow-blue-500/20 transition-all">

@@ -1,20 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Search, Filter, Download, MoreHorizontal, MessageCircle, Phone, Edit2, Trash2, ChevronDown, AlertTriangle, RefreshCw } from "lucide-react";
 import type { Lead } from "@/lib/types";
 import { logLeadActivity } from "@/lib/activities";
 import { Pagination } from "@/components/Pagination";
-
-const statusColors: Record<string, string> = {
-  "Hot": "bg-red-50 text-[#EF4444] border border-red-100",
-  "Warm": "bg-amber-50 text-[#F59E0B] border border-amber-100",
-  "New": "bg-blue-50 text-[#2563EB] border border-blue-100",
-  "Cold": "bg-slate-50 text-[#64748B] border border-slate-100",
-};
-
-const statuses = ["Hot", "Warm", "New", "Cold"];
+import { exportLeadsToCSV } from "@/lib/export";
+import { useLeadStatuses, statusBadgeStyle } from "@/lib/statuses";
 
 interface LeadsTableProps {
   items: Lead[];
@@ -34,6 +27,7 @@ interface LeadsTableProps {
   onEdit?: (lead: Lead) => void;
   onDelete?: (id: string) => void;
   onViewCustomer?: (lead: Lead) => void;
+  onExport?: (leads: Lead[]) => void;
 }
 
 export function LeadsTable({
@@ -54,8 +48,14 @@ export function LeadsTable({
   onEdit,
   onDelete,
   onViewCustomer,
+  onExport,
 }: LeadsTableProps) {
   const [statusOpen, setStatusOpen] = useState(false);
+  const { statuses } = useLeadStatuses();
+  const statusColorMap = useMemo(
+    () => Object.fromEntries(statuses.map((s) => [s.name, s.color])),
+    [statuses]
+  );
 
   const totalPages = Math.max(1, Math.ceil(total / itemsPerPage));
   const effectivePage = Math.min(currentPage, totalPages);
@@ -69,7 +69,7 @@ export function LeadsTable({
           <p className="text-[#64748B] mt-1 text-sm">Track, manage, and convert your real estate leads.</p>
         </div>
         <div className="flex gap-2">
-          <button className="flex items-center gap-2 px-4 py-2 bg-white border border-[#E2E8F0] rounded-xl text-sm font-medium text-[#0F172A] hover:bg-[#F8FAFC] transition-colors">
+          <button onClick={() => onExport?.(items)} className="flex items-center gap-2 px-4 py-2 bg-white border border-[#E2E8F0] rounded-xl text-sm font-medium text-[#0F172A] hover:bg-[#F8FAFC] transition-colors">
             <Download size={16} className="hidden sm:block" /> <span className="sm:hidden">Export</span><span className="hidden sm:inline">Export</span>
           </button>
           <button onClick={onAddLead} className="flex items-center gap-2 px-4 py-2 bg-[#2563EB] text-white rounded-xl text-sm font-medium hover:bg-[#1D4ED8] shadow-lg shadow-blue-500/20 transition-all">
@@ -108,11 +108,11 @@ export function LeadsTable({
                 </button>
                 {statuses.map((s) => (
                   <button
-                    key={s}
-                    onClick={() => { onStatusFilterChange(s); setStatusOpen(false); }}
-                    className={`w-full text-left px-3 py-2 text-sm ${statusFilter === s ? "text-[#2563EB] font-medium" : "text-[#0F172A]"} hover:bg-[#F8FAFC]`}
+                    key={s.id}
+                    onClick={() => { onStatusFilterChange(s.name); setStatusOpen(false); }}
+                    className={`w-full text-left px-3 py-2 text-sm ${statusFilter === s.name ? "text-[#2563EB] font-medium" : "text-[#0F172A]"} hover:bg-[#F8FAFC]`}
                   >
-                    {s}
+                    {s.name}
                   </button>
                 ))}
               </div>
@@ -185,7 +185,7 @@ export function LeadsTable({
                     <td className="px-6 py-4 text-sm text-[#64748B]">{lead.area}</td>
                     <td className="px-6 py-4 text-sm text-[#64748B]">{lead.date || "—"}</td>
                     <td className="px-6 py-4">
-                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${statusColors[lead.status]}`}>
+                      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border" style={statusBadgeStyle(statusColorMap[lead.status])}>
                         {lead.status}
                       </span>
                     </td>
@@ -246,7 +246,7 @@ export function LeadsTable({
                     <p className="text-xs text-[#64748B]">{lead.id}</p>
                   </div>
                 </div>
-                <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${statusColors[lead.status]}`}>
+                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border" style={statusBadgeStyle(statusColorMap[lead.status])}>
                   {lead.status}
                 </span>
               </div>

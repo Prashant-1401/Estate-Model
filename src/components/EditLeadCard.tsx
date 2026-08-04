@@ -6,6 +6,7 @@ import { X, User, Phone, Mail, IndianRupee, MapPin, Building, Tag, Save } from "
 import type { Lead, LeadSource } from "@/lib/types";
 import { api } from "@/lib/api";
 import { useDropdownOptions } from "@/lib/dropdowns";
+import { useLeadStatuses } from "@/lib/statuses";
 
 interface EditLeadCardProps {
   isOpen: boolean;
@@ -31,6 +32,7 @@ export function EditLeadCard({ isOpen, onClose, onSubmit, lead }: EditLeadCardPr
   const { options: budgetOptions } = useDropdownOptions("budget");
   const { options: areaOptions } = useDropdownOptions("area");
   const { options: propertyTypeOptions } = useDropdownOptions("property_type");
+  const { statuses } = useLeadStatuses();
 
   const loadSources = useCallback(async () => {
     try {
@@ -141,10 +143,9 @@ export function EditLeadCard({ isOpen, onClose, onSubmit, lead }: EditLeadCardPr
                 <div className="relative">
                   <select value={formData.status} onChange={(e) => setFormData({ ...formData, status: e.target.value })}
                     className="w-full pl-4 pr-4 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition-all appearance-none">
-                    <option value="New">New</option>
-                    <option value="Warm">Warm</option>
-                    <option value="Hot">Hot</option>
-                    <option value="Cold">Cold</option>
+                    {statuses.map((s) => (
+                      <option key={s.id} value={s.name}>{s.name}</option>
+                    ))}
                   </select>
                 </div>
               </div>
@@ -194,21 +195,11 @@ export function EditLeadCard({ isOpen, onClose, onSubmit, lead }: EditLeadCardPr
                   <select value={formData.source} onChange={(e) => setFormData({ ...formData, source: e.target.value })}
                     className="w-full pl-10 pr-4 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition-all appearance-none">
                     <option value="">Select Source</option>
-                    {sources.length > 0 ? (
-                      sources.map((s) => (
-                        <option key={s.id} value={s.name}>
-                          {s.name}
-                        </option>
-                      ))
-                    ) : (
-                      <>
-                        <option value="Website">Website</option>
-                        <option value="Referral">Referral</option>
-                        <option value="Property Portal">Property Portal</option>
-                        <option value="Social Media">Social Media</option>
-                        <option value="Walk-in">Walk-in</option>
-                      </>
-                    )}
+                    {sources.map((s) => (
+                      <option key={s.id} value={s.name}>
+                        {s.name}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>

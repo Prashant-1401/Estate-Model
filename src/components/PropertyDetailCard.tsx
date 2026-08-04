@@ -5,6 +5,8 @@ import { motion, AnimatePresence } from "framer-motion";
   import { X, MapPin, Bed, Bath, Square, Heart, Share2, ChevronLeft, ChevronRight, Image as ImageIcon, Phone, MessageCircle } from "lucide-react";
 import type { Property, Company } from "@/lib/types";
 import { api } from "@/lib/api";
+import { useDropdownOptions } from "@/lib/dropdowns";
+import { statusBadgeStyle } from "@/lib/statuses";
 
 interface PropertyDetailCardProps {
   property: Property | null;
@@ -12,16 +14,14 @@ interface PropertyDetailCardProps {
   onClose: () => void;
 }
 
-const statusColors: Record<string, string> = {
-  Available: "bg-[#22C55E] text-white",
-  Reserved: "bg-[#F59E0B] text-white",
-  Sold: "bg-[#EF4444] text-white",
-};
-
 export function PropertyDetailCard({ property, isOpen, onClose }: PropertyDetailCardProps) {
   const [currentImage, setCurrentImage] = useState(0);
   const [isLiked, setIsLiked] = useState(false);
   const [companyPhone, setCompanyPhone] = useState("");
+  const { options: propertyStatusOptions } = useDropdownOptions("property_status");
+  const statusColorMap = Object.fromEntries(
+    propertyStatusOptions.map((o) => [o.value, o.color])
+  );
 
   const loadCompany = useCallback(async () => {
     try {
@@ -65,7 +65,7 @@ export function PropertyDetailCard({ property, isOpen, onClose }: PropertyDetail
           >
             <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-[#E2E8F0] shrink-0">
               <div className="flex items-center gap-3">
-                <div className={`w-2.5 h-2.5 rounded-full ${statusColors[property.status].split(" ")[0]}`} />
+                <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: statusColorMap[property.status] || "#94A3B8" }} />
                 <h2 className="text-lg sm:text-xl font-semibold text-[#0F172A] line-clamp-1">{property.title}</h2>
               </div>
               <button onClick={onClose} className="p-2 hover:bg-[#F8FAFC] rounded-xl transition-colors">
@@ -179,7 +179,7 @@ export function PropertyDetailCard({ property, isOpen, onClose }: PropertyDetail
                     </div>
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-[#64748B]">Status</span>
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColors[property.status]}`}>
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border" style={statusBadgeStyle(statusColorMap[property.status])}>
                         {property.status}
                       </span>
                     </div>
