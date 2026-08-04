@@ -1,7 +1,7 @@
 """create dashboard widget tables
 
-Revision ID: 0007
-Revises: 0006
+Revision ID: 0007_bis
+Revises: 0007
 Create Date: 2026-08-03
 """
 
@@ -9,8 +9,8 @@ from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
-revision = "0007"
-down_revision = "0006"
+revision = "0007_bis"
+down_revision = "0007"
 branch_labels = None
 depends_on = None
 

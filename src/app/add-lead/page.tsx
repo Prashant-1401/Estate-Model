@@ -4,11 +4,15 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { Building2, Phone, Mail, MapPin, IndianRupee, Send, CheckCircle, User } from "lucide-react";
 import { api } from "@/lib/api";
+import { useDropdownOptions } from "@/lib/dropdowns";
 
 export default function AddLeadPage() {
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const { options: budgetOptions } = useDropdownOptions("budget");
+  const { options: areaOptions } = useDropdownOptions("area");
+  const { options: propertyTypeOptions } = useDropdownOptions("property_type");
   const [formData, setFormData] = useState({
     name: "",
     phone: "",
@@ -166,11 +170,9 @@ export default function AddLeadPage() {
                   className="w-full pl-10 pr-4 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition-all appearance-none"
                 >
                   <option value="">Select Budget</option>
-                  <option value="₹50L - ₹80L">₹50L - ₹80L</option>
-                  <option value="₹80L - ₹1Cr">₹80L - ₹1Cr</option>
-                  <option value="₹1Cr - ₹1.5Cr">₹1Cr - ₹1.5Cr</option>
-                  <option value="₹1.5Cr - ₹2Cr">₹1.5Cr - ₹2Cr</option>
-                  <option value="₹2Cr+">₹2Cr+</option>
+                  {budgetOptions.map((o) => (
+                    <option key={o.id} value={o.value}>{o.label}</option>
+                  ))}
                 </select>
               </div>
             </div>
@@ -184,11 +186,9 @@ export default function AddLeadPage() {
                   className="w-full pl-10 pr-4 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition-all appearance-none"
                 >
                   <option value="">Select Area</option>
-                  <option value="Palm Jumeirah">Palm Jumeirah</option>
-                  <option value="Downtown Dubai">Downtown Dubai</option>
-                  <option value="Emirates Hills">Emirates Hills</option>
-                  <option value="Dubai Marina">Dubai Marina</option>
-                  <option value="Business Bay">Business Bay</option>
+                  {areaOptions.map((o) => (
+                    <option key={o.id} value={o.value}>{o.label}</option>
+                  ))}
                 </select>
               </div>
             </div>
@@ -205,10 +205,9 @@ export default function AddLeadPage() {
                 className="w-full pl-10 pr-4 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition-all appearance-none"
               >
                 <option value="">Select Type</option>
-                <option value="villa">Villa</option>
-                <option value="apartment">Apartment</option>
-                <option value="penthouse">Penthouse</option>
-                <option value="townhouse">Townhouse</option>
+                {propertyTypeOptions.map((o) => (
+                  <option key={o.id} value={o.value}>{o.label}</option>
+                ))}
               </select>
             </div>
           </div>

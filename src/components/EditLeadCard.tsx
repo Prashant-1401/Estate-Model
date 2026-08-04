@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, User, Phone, Mail, IndianRupee, MapPin, Building, Tag, Save } from "lucide-react";
 import type { Lead, LeadSource } from "@/lib/types";
 import { api } from "@/lib/api";
+import { useDropdownOptions } from "@/lib/dropdowns";
 
 interface EditLeadCardProps {
   isOpen: boolean;
@@ -27,6 +28,9 @@ export function EditLeadCard({ isOpen, onClose, onSubmit, lead }: EditLeadCardPr
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [sources, setSources] = useState<LeadSource[]>([]);
+  const { options: budgetOptions } = useDropdownOptions("budget");
+  const { options: areaOptions } = useDropdownOptions("area");
+  const { options: propertyTypeOptions } = useDropdownOptions("property_type");
 
   const loadSources = useCallback(async () => {
     try {
@@ -151,11 +155,9 @@ export function EditLeadCard({ isOpen, onClose, onSubmit, lead }: EditLeadCardPr
                   <select required value={formData.budget} onChange={(e) => setFormData({ ...formData, budget: e.target.value })}
                     className="w-full pl-10 pr-4 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition-all appearance-none">
                     <option value="">Select Budget</option>
-                    <option value="₹50L - ₹80L">₹50L - ₹80L</option>
-                    <option value="₹80L - ₹1Cr">₹80L - ₹1Cr</option>
-                    <option value="₹1Cr - ₹1.5Cr">₹1Cr - ₹1.5Cr</option>
-                    <option value="₹1.5Cr - ₹2Cr">₹1.5Cr - ₹2Cr</option>
-                    <option value="₹2Cr+">₹2Cr+</option>
+                    {budgetOptions.map((o) => (
+                      <option key={o.id} value={o.value}>{o.label}</option>
+                    ))}
                   </select>
                 </div>
               </div>
@@ -166,11 +168,9 @@ export function EditLeadCard({ isOpen, onClose, onSubmit, lead }: EditLeadCardPr
                   <select required value={formData.area} onChange={(e) => setFormData({ ...formData, area: e.target.value })}
                     className="w-full pl-10 pr-4 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition-all appearance-none">
                     <option value="">Select Area</option>
-                    <option value="Palm Jumeirah">Palm Jumeirah</option>
-                    <option value="Downtown Dubai">Downtown Dubai</option>
-                    <option value="Emirates Hills">Emirates Hills</option>
-                    <option value="Dubai Marina">Dubai Marina</option>
-                    <option value="Business Bay">Business Bay</option>
+                    {areaOptions.map((o) => (
+                      <option key={o.id} value={o.value}>{o.label}</option>
+                    ))}
                   </select>
                 </div>
               </div>
@@ -181,10 +181,9 @@ export function EditLeadCard({ isOpen, onClose, onSubmit, lead }: EditLeadCardPr
                   <select required value={formData.propertyType} onChange={(e) => setFormData({ ...formData, propertyType: e.target.value })}
                     className="w-full pl-10 pr-4 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition-all appearance-none">
                     <option value="">Select Type</option>
-                    <option value="Villa">Villa</option>
-                    <option value="Apartment">Apartment</option>
-                    <option value="Penthouse">Penthouse</option>
-                    <option value="Townhouse">Townhouse</option>
+                    {propertyTypeOptions.map((o) => (
+                      <option key={o.id} value={o.value}>{o.label}</option>
+                    ))}
                   </select>
                 </div>
               </div>

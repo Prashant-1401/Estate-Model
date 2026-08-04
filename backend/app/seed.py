@@ -16,6 +16,7 @@ from app.models.lead import Lead
 from app.models.property import Property
 from app.models.project import Project
 from app.models.follow_up import FollowUp
+from app.models.dropdown import DropdownOption
 from app.auth import hash_password
 
 
@@ -69,6 +70,34 @@ DEFAULT_LEAD_SOURCES = [
     {"name": "Direct Walk-In", "slug": "direct-walk-in", "icon": "Footprints", "sort_order": 7},
     {"name": "Website", "slug": "website", "icon": "Globe", "sort_order": 8},
     {"name": "Referral", "slug": "referral", "icon": "UserPlus", "sort_order": 9},
+]
+
+DEFAULT_DROPDOWN_OPTIONS = [
+    {"category": "budget", "label": "₹50L - ₹80L", "value": "₹50L - ₹80L", "sort_order": 0},
+    {"category": "budget", "label": "₹80L - ₹1Cr", "value": "₹80L - ₹1Cr", "sort_order": 1},
+    {"category": "budget", "label": "₹1Cr - ₹1.5Cr", "value": "₹1Cr - ₹1.5Cr", "sort_order": 2},
+    {"category": "budget", "label": "₹1.5Cr - ₹2Cr", "value": "₹1.5Cr - ₹2Cr", "sort_order": 3},
+    {"category": "budget", "label": "₹2Cr+", "value": "₹2Cr+", "sort_order": 4},
+    {"category": "area", "label": "Palm Jumeirah", "value": "Palm Jumeirah", "sort_order": 0},
+    {"category": "area", "label": "Downtown Dubai", "value": "Downtown Dubai", "sort_order": 1},
+    {"category": "area", "label": "Emirates Hills", "value": "Emirates Hills", "sort_order": 2},
+    {"category": "area", "label": "Dubai Marina", "value": "Dubai Marina", "sort_order": 3},
+    {"category": "area", "label": "Business Bay", "value": "Business Bay", "sort_order": 4},
+    {"category": "property_type", "label": "Villa", "value": "Villa", "sort_order": 0},
+    {"category": "property_type", "label": "Apartment", "value": "Apartment", "sort_order": 1},
+    {"category": "property_type", "label": "Penthouse", "value": "Penthouse", "sort_order": 2},
+    {"category": "property_type", "label": "Townhouse", "value": "Townhouse", "sort_order": 3},
+    {"category": "property_status", "label": "Available", "value": "Available", "color": "#10B981", "sort_order": 0},
+    {"category": "property_status", "label": "Reserved", "value": "Reserved", "color": "#F59E0B", "sort_order": 1},
+    {"category": "property_status", "label": "Sold", "value": "Sold", "color": "#EF4444", "sort_order": 2},
+    {"category": "project_status", "label": "Planning", "value": "Planning", "sort_order": 0},
+    {"category": "project_status", "label": "Under Construction", "value": "Under Construction", "sort_order": 1},
+    {"category": "project_status", "label": "Completed", "value": "Completed", "sort_order": 2},
+    {"category": "project_status", "label": "On Hold", "value": "On Hold", "sort_order": 3},
+    {"category": "followup_status", "label": "Today", "value": "Today", "sort_order": 0},
+    {"category": "followup_status", "label": "Tomorrow", "value": "Tomorrow", "sort_order": 1},
+    {"category": "followup_status", "label": "This Week", "value": "This Week", "sort_order": 2},
+    {"category": "followup_status", "label": "Decision Pending", "value": "Decision Pending", "sort_order": 3},
 ]
 
 DEFAULT_DASHBOARD_WIDGETS = [
@@ -204,6 +233,22 @@ async def seed_lead_sources(db):
         source_id = f"LDS-{int(time.time() * 1000)}-{source_data['slug'][:4].upper()}"
         source = LeadSource(id=source_id, **source_data)
         db.add(source)
+    await db.flush()
+
+
+async def seed_dropdowns(db):
+    for option_data in DEFAULT_DROPDOWN_OPTIONS:
+        result = await db.execute(
+            select(DropdownOption).where(
+                DropdownOption.category == option_data["category"],
+                DropdownOption.value == option_data["value"],
+            )
+        )
+        if result.scalar_one_or_none():
+            continue
+        option_id = f"DD-{int(time.time() * 1000)}-{option_data['category'][:3].upper()}"
+        option = DropdownOption(id=option_id, **option_data)
+        db.add(option)
     await db.flush()
 
 
@@ -348,6 +393,7 @@ async def seed_users():
         await seed_permissions(db)
         await seed_statuses(db)
         await seed_lead_sources(db)
+        await seed_dropdowns(db)
         await seed_dashboard_widgets(db)
         await seed_notification_templates(db)
         await seed_sample_data(db)

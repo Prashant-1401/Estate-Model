@@ -12,7 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.database import engine
 from app.routers import lead, property, project, user, dashboard, follow_up
-from app.routers import module, role, form, company, workflow, notification, config, dashboard_config
+from app.routers import module, role, form, company, workflow, notification, config, dashboard_config, dropdown
 from app.seed import seed_users
 
 logger = logging.getLogger(__name__)
@@ -73,6 +73,7 @@ app.include_router(workflow.router)
 app.include_router(notification.router)
 app.include_router(config.router)
 app.include_router(dashboard_config.router)
+app.include_router(dropdown.router)
 
 
 @app.get("/")

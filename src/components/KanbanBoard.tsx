@@ -1,18 +1,40 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, MoreHorizontal, Clock, User, Trash2, Edit2, X, ChevronDown } from "lucide-react";
 import type { FollowUp, FollowUpStatus } from "@/lib/types";
 import { api } from "@/lib/api";
 import { useToast } from "@/lib/toast-context";
+import { useDropdownOptions } from "@/lib/dropdowns";
 
-const columns: { id: FollowUpStatus; label: string; color: string; dot: string }[] = [
-  { id: "Today", label: "Today", color: "text-[#EF4444]", dot: "bg-[#EF4444]" },
-  { id: "Tomorrow", label: "Tomorrow", color: "text-[#F59E0B]", dot: "bg-[#F59E0B]" },
-  { id: "This Week", label: "This Week", color: "text-[#2563EB]", dot: "bg-[#2563EB]" },
-  { id: "Decision Pending", label: "Decision Pending", color: "text-[#22C55E]", dot: "bg-[#22C55E]" },
-];
+const COLUMN_STYLES: Record<string, { color: string; dot: string }> = {
+  Today: { color: "text-[#EF4444]", dot: "bg-[#EF4444]" },
+  Tomorrow: { color: "text-[#F59E0B]", dot: "bg-[#F59E0B]" },
+  "This Week": { color: "text-[#2563EB]", dot: "bg-[#2563EB]" },
+  "Decision Pending": { color: "text-[#22C55E]", dot: "bg-[#22C55E]" },
+};
+
+const DEFAULT_COLUMN_STYLE = { color: "text-[#64748B]", dot: "bg-[#64748B]" };
+
+interface FollowUpColumn {
+  id: FollowUpStatus;
+  label: string;
+  color: string;
+  dot: string;
+}
+
+function buildColumns(options: { label: string; value: string }[]): FollowUpColumn[] {
+  return options.map((o) => {
+    const style = COLUMN_STYLES[o.label] || DEFAULT_COLUMN_STYLE;
+    return {
+      id: o.value as FollowUpStatus,
+      label: o.label,
+      color: style.color,
+      dot: style.dot,
+    };
+  });
+}
 
 interface KanbanBoardProps {
   items: FollowUp[];
@@ -24,6 +46,12 @@ export function KanbanBoard({ items, onRefresh }: KanbanBoardProps) {
   const [showAddCard, setShowAddCard] = useState<FollowUpStatus | null>(null);
   const [editingItem, setEditingItem] = useState<FollowUp | null>(null);
   const [menuOpen, setMenuOpen] = useState<string | null>(null);
+  const { options: followupStatusOptions } = useDropdownOptions("followup_status");
+
+  const columns = useMemo(
+    () => buildColumns(followupStatusOptions),
+    [followupStatusOptions]
+  );
 
   const getColumnItems = (status: FollowUpStatus) =>
     items.filter((item) => item.status === status);
@@ -204,6 +232,8 @@ interface FollowUpModalProps {
 function FollowUpModal({ initialData, defaultStatus, onClose, onSaved }: FollowUpModalProps) {
   const { showToast } = useToast();
   const [loading, setLoading] = useState(false);
+  const { options: followupStatusOptions } = useDropdownOptions("followup_status");
+  const columns = useMemo(() => buildColumns(followupStatusOptions), [followupStatusOptions]);
   const [formData, setFormData] = useState({
     lead_id: initialData?.lead_id || "",
     lead_name: initialData?.lead_name || "",

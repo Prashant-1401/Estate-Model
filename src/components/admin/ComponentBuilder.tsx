@@ -1,26 +1,28 @@
 "use client";
 
 import { useState, useEffect, useCallback, type ComponentType } from "react";
-import { FormInput, GitBranch, Share2, Bell, Zap, Shield, Building2, FileText, Plus, Edit2, Trash2 } from "lucide-react";
+import { FormInput, GitBranch, Share2, Bell, Zap, Shield, Building2, FileText, Plus, Edit2, Trash2, ListChecks } from "lucide-react";
 import { api } from "@/lib/api";
 import { useToast } from "@/lib/toast-context";
 import type { FormConfig } from "@/lib/types";
 import { FormBuilder } from "@/components/admin/FormBuilder";
 import { StatusManager } from "@/components/admin/StatusManager";
 import { LeadSourceManager } from "@/components/admin/LeadSourceManager";
+import { DropdownBuilder } from "@/components/admin/DropdownBuilder";
 import { NotificationManager } from "@/components/admin/NotificationManager";
 import { WorkflowBuilder } from "@/components/admin/WorkflowBuilder";
 import { RolesManager } from "@/components/admin/RolesManager";
 import { PermissionsMatrix } from "@/components/admin/PermissionsMatrix";
 import { CompanySettings } from "@/components/admin/CompanySettings";
 
-type BuilderTab = "forms" | "statuses" | "lead-sources" | "notifications" | "workflows" | "roles" | "company";
+type BuilderTab = "forms" | "statuses" | "lead-sources" | "dropdowns" | "notifications" | "workflows" | "roles" | "company";
 type FormEntity = FormConfig["entity_type"];
 
 const TABS: { id: BuilderTab; label: string; icon: ComponentType<{ size?: number; className?: string }> }[] = [
   { id: "forms", label: "Forms", icon: FormInput },
   { id: "statuses", label: "Statuses", icon: GitBranch },
   { id: "lead-sources", label: "Lead Sources", icon: Share2 },
+  { id: "dropdowns", label: "Dropdowns", icon: ListChecks },
   { id: "notifications", label: "Notifications", icon: Bell },
   { id: "workflows", label: "Workflows", icon: Zap },
   { id: "roles", label: "Roles & Permissions", icon: Shield },
@@ -211,6 +213,12 @@ export function ComponentBuilder() {
           {activeTab === "lead-sources" && (
             <div className="h-[calc(100vh-18rem)] min-h-[440px]">
               <LeadSourceManager isOpen embedded onClose={() => {}} />
+            </div>
+          )}
+
+          {activeTab === "dropdowns" && (
+            <div className="h-[calc(100vh-18rem)] min-h-[440px]">
+              <DropdownBuilder isOpen embedded onClose={() => {}} />
             </div>
           )}
 

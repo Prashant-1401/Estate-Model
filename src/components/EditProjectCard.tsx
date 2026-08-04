@@ -4,6 +4,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Building2, MapPin, Users, IndianRupee, Save } from "lucide-react";
 import type { Project } from "@/lib/types";
+import { useDropdownOptions } from "@/lib/dropdowns";
 
 interface EditProjectCardProps {
   isOpen: boolean;
@@ -25,6 +26,7 @@ export function EditProjectCard({ isOpen, onClose, onSubmit, project }: EditProj
     description: project?.description || "",
     status: project?.status || "Planning",
   });
+  const { options: projectStatusOptions } = useDropdownOptions("project_status");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -104,10 +106,9 @@ export function EditProjectCard({ isOpen, onClose, onSubmit, project }: EditProj
                 <label className="text-sm font-medium text-[#0F172A]">Status</label>
                 <select value={formData.status} onChange={(e) => setFormData({ ...formData, status: e.target.value as Project["status"] })}
                   className="w-full px-4 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition-all appearance-none">
-                  <option value="Planning">Planning</option>
-                  <option value="Under Construction">Under Construction</option>
-                  <option value="Completed">Completed</option>
-                  <option value="On Hold">On Hold</option>
+                  {projectStatusOptions.map((o) => (
+                    <option key={o.id} value={o.value}>{o.label}</option>
+                  ))}
                 </select>
               </div>
               <div className="space-y-1.5">

@@ -294,6 +294,25 @@ export interface LeadSource {
   created_at?: string;
 }
 
+export type DropdownCategory =
+  | "budget"
+  | "area"
+  | "property_type"
+  | "property_status"
+  | "project_status"
+  | "followup_status";
+
+export interface DropdownOption {
+  id: string;
+  category: DropdownCategory;
+  label: string;
+  value: string;
+  color: string;
+  sort_order: number;
+  is_active: boolean;
+  created_at?: string;
+}
+
 // ── Dashboard Widget Types ──────────────────────────────────────
 
 export interface DashboardWidget {

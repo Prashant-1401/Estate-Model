@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, MapPin, Bed, Bath, Square, Building, Building2, ExternalLink, IndianRupee, Save, ImagePlus, Trash2 } from "lucide-react";
 import { api } from "@/lib/api";
 import type { Project, Property } from "@/lib/types";
+import { useDropdownOptions } from "@/lib/dropdowns";
 
 interface EditPropertyCardProps {
   isOpen: boolean;
@@ -21,6 +22,8 @@ export function EditPropertyCard({ isOpen, onClose, onSubmit, onViewProject, pro
   const [projectId, setProjectId] = useState<string>(property?.project_id || "");
   const [projects, setProjects] = useState<Project[]>([]);
   const [projectsLoading, setProjectsLoading] = useState(true);
+  const { options: propertyTypeOptions } = useDropdownOptions("property_type");
+  const { options: propertyStatusOptions } = useDropdownOptions("property_status");
 
   useEffect(() => {
     if (!isOpen) return;
@@ -156,10 +159,9 @@ export function EditPropertyCard({ isOpen, onClose, onSubmit, onViewProject, pro
                   <select required value={formData.type} onChange={(e) => setFormData({ ...formData, type: e.target.value })}
                     className="w-full pl-10 pr-4 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition-all appearance-none">
                     <option value="">Select Type</option>
-                    <option value="Villa">Villa</option>
-                    <option value="Apartment">Apartment</option>
-                    <option value="Penthouse">Penthouse</option>
-                    <option value="Townhouse">Townhouse</option>
+                    {propertyTypeOptions.map((o) => (
+                      <option key={o.id} value={o.value}>{o.label}</option>
+                    ))}
                   </select>
                 </div>
               </div>
@@ -167,9 +169,9 @@ export function EditPropertyCard({ isOpen, onClose, onSubmit, onViewProject, pro
                 <label className="text-sm font-medium text-[#0F172A]">Status</label>
                 <select value={formData.status} onChange={(e) => setFormData({ ...formData, status: e.target.value as Property["status"] })}
                   className="w-full pl-4 pr-4 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition-all appearance-none">
-                  <option value="Available">Available</option>
-                  <option value="Reserved">Reserved</option>
-                  <option value="Sold">Sold</option>
+                  {propertyStatusOptions.map((o) => (
+                    <option key={o.id} value={o.value}>{o.label}</option>
+                  ))}
                 </select>
               </div>
               <div className="sm:col-span-2 space-y-1.5">
