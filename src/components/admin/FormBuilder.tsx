@@ -4,10 +4,12 @@ import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   X, FormInput, Plus, GripVertical, Trash2, ChevronDown, ChevronUp, Edit2,
+  Save,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { useToast } from "@/lib/toast-context";
 import type { FormConfig, FormSection, FormField } from "@/lib/types";
+import { ENTITY_FIELDS } from "@/lib/form-keys";
 
 interface FormBuilderProps {
   isOpen: boolean;
@@ -16,6 +18,25 @@ interface FormBuilderProps {
   entityType?: "lead" | "property" | "project";
   embedded?: boolean;
 }
+
+const FIELD_TYPES = [
+  { value: "text", label: "Text" },
+  { value: "email", label: "Email" },
+  { value: "phone", label: "Phone" },
+  { value: "number", label: "Number" },
+  { value: "currency", label: "Currency" },
+  { value: "dropdown", label: "Dropdown" },
+  { value: "multi_select", label: "Multi Select" },
+  { value: "radio", label: "Radio Buttons" },
+  { value: "checkbox", label: "Checkbox" },
+  { value: "date", label: "Date" },
+  { value: "time", label: "Time" },
+  { value: "textarea", label: "Textarea" },
+  { value: "file", label: "File Upload" },
+  { value: "location", label: "Location" },
+  { value: "agent", label: "Assign to Agent" },
+  { value: "project", label: "Link to Project" },
+] as const;
 
 export function FormBuilder({ isOpen, onClose, formId, entityType = "lead", embedded = false }: FormBuilderProps) {
   const { showToast } = useToast();
@@ -27,6 +48,30 @@ export function FormBuilder({ isOpen, onClose, formId, entityType = "lead", embe
   const [sections, setSections] = useState<FormSection[]>([]);
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
   const [editingField, setEditingField] = useState<{ sectionId: string; field: FormField } | null>(null);
+  const [fieldEditorOpen, setFieldEditorOpen] = useState(false);
+  const [fieldDraft, setFieldDraft] = useState<FormField | null>(null);
+
+  const openFieldEditor = (sectionId: string, field: FormField) => {
+    setEditingField({ sectionId, field });
+    setFieldDraft({ ...field });
+    setFieldEditorOpen(true);
+  };
+
+  const closeFieldEditor = () => {
+    setFieldEditorOpen(false);
+    setEditingField(null);
+    setFieldDraft(null);
+  };
+
+  const saveFieldDraft = () => {
+    if (!editingField || !fieldDraft) return;
+    setSections(sections.map(s =>
+      s.id === editingField.sectionId
+        ? { ...s, fields: s.fields.map(f => (f.id === fieldDraft.id ? fieldDraft : f)) }
+        : s
+    ));
+    closeFieldEditor();
+  };
 
   const loadForm = useCallback(async (id: string) => {
     try {
@@ -115,7 +160,7 @@ export function FormBuilder({ isOpen, onClose, formId, entityType = "lead", embe
     setSections(sections.map(s =>
       s.id === sectionId ? { ...s, fields: [...s.fields, newField] } : s
     ));
-    setEditingField({ sectionId, field: newField });
+    openFieldEditor(sectionId, newField);
   };
 
   const removeField = (sectionId: string, fieldId: string) => {
@@ -390,7 +435,7 @@ export function FormBuilder({ isOpen, onClose, formId, entityType = "lead", embe
                                   <span className="px-1.5 py-0.5 bg-red-50 text-red-600 rounded text-xs">Required</span>
                                 )}
                                 <button
-                                  onClick={() => setEditingField({ sectionId: section.id, field })}
+                                  onClick={() => openFieldEditor(section.id, field)}
                                   className="p-1.5 text-[#2563EB] hover:bg-blue-100 rounded-lg transition-colors"
                                 >
                                   <Edit2 size={14} />
@@ -414,6 +459,187 @@ export function FormBuilder({ isOpen, onClose, formId, entityType = "lead", embe
           </div>
         </motion.div>
       </motion.div>
+
+      {/* Field Editor Modal */}
+      <AnimatePresence>
+        {fieldEditorOpen && fieldDraft && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-60 flex items-center justify-center p-4"
+            onClick={closeFieldEditor}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto"
+            >
+              <div className="flex items-center justify-between px-4 py-4 border-b border-[#E2E8F0] shrink-0">
+                <h3 className="text-lg font-semibold text-[#0F172A]">Edit Field</h3>
+                <button onClick={closeFieldEditor} className="p-2 hover:bg-[#F8FAFC] rounded-xl transition-colors">
+                  <X size={20} className="text-[#64748B]" />
+                </button>
+              </div>
+              <div className="p-4 space-y-4">
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-[#0F172A]">Label *</label>
+                  <input
+                    type="text"
+                    value={fieldDraft.label}
+                    onChange={(e) => setFieldDraft({ ...fieldDraft, label: e.target.value })}
+                    className="w-full px-4 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition-all"
+                    placeholder="Field label"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-[#0F172A]">Field Type *</label>
+                  <select
+                    value={fieldDraft.field_type}
+                    onChange={(e) => setFieldDraft({ ...fieldDraft, field_type: e.target.value, options: ["dropdown", "multi_select", "radio"].includes(e.target.value) ? fieldDraft.options || [] : [] })}
+                    className="w-full px-4 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition-all"
+                  >
+                    {FIELD_TYPES.map((t) => (
+                      <option key={t.value} value={t.value}>{t.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-[#0F172A]">Placeholder</label>
+                  <input
+                    type="text"
+                    value={fieldDraft.placeholder}
+                    onChange={(e) => setFieldDraft({ ...fieldDraft, placeholder: e.target.value })}
+                    className="w-full px-4 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition-all"
+                    placeholder="Placeholder text"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-[#0F172A]">Help Text</label>
+                  <input
+                    type="text"
+                    value={fieldDraft.help_text}
+                    onChange={(e) => setFieldDraft({ ...fieldDraft, help_text: e.target.value })}
+                    className="w-full px-4 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition-all"
+                    placeholder="Help text"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-[#0F172A]">Default Value</label>
+                  <input
+                    type="text"
+                    value={fieldDraft.default_value}
+                    onChange={(e) => setFieldDraft({ ...fieldDraft, default_value: e.target.value })}
+                    className="w-full px-4 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition-all"
+                    placeholder="Default value"
+                  />
+                </div>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    id="required"
+                    checked={fieldDraft.is_required}
+                    onChange={(e) => setFieldDraft({ ...fieldDraft, is_required: e.target.checked })}
+                    className="w-4 h-4 text-[#2563EB] rounded focus:ring-[#2563EB]"
+                  />
+                  <label htmlFor="required" className="text-sm font-medium text-[#0F172A]">Required</label>
+                  <input
+                    type="checkbox"
+                    id="hidden"
+                    checked={fieldDraft.is_hidden}
+                    onChange={(e) => setFieldDraft({ ...fieldDraft, is_hidden: e.target.checked })}
+                    className="w-4 h-4 text-[#2563EB] rounded focus:ring-[#2563EB]"
+                  />
+                  <label htmlFor="hidden" className="text-sm font-medium text-[#0F172A]">Hidden</label>
+                </div>
+                {["dropdown", "multi_select", "radio"].includes(fieldDraft.field_type) && (
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-[#0F172A]">Options</label>
+                    {(fieldDraft.options || []).map((opt, idx) => (
+                      <div key={opt.id} className="flex gap-2">
+                        <input
+                          type="text"
+                          value={opt.label}
+                          onChange={(e) => {
+                            const newOpts = [...(fieldDraft.options || [])];
+                            newOpts[idx] = { ...opt, label: e.target.value };
+                            setFieldDraft({ ...fieldDraft, options: newOpts });
+                          }}
+                          placeholder="Label"
+                          className="flex-1 px-3 py-2 bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB]"
+                        />
+                        <input
+                          type="text"
+                          value={opt.value}
+                          onChange={(e) => {
+                            const newOpts = [...(fieldDraft.options || [])];
+                            newOpts[idx] = { ...opt, value: e.target.value };
+                            setFieldDraft({ ...fieldDraft, options: newOpts });
+                          }}
+                          placeholder="Value"
+                          className="flex-1 px-3 py-2 bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB]"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newOpts = (fieldDraft.options || []).filter((_, i) => i !== idx);
+                            setFieldDraft({ ...fieldDraft, options: newOpts });
+                          }}
+                          className="p-2 text-[#EF4444] hover:bg-red-50 rounded-lg transition-colors"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newOpt = { id: `opt-${Date.now()}`, field_id: fieldDraft.id, label: "", value: "", sort_order: (fieldDraft.options || []).length };
+                        setFieldDraft({ ...fieldDraft, options: [...(fieldDraft.options || []), newOpt] });
+                      }}
+                      className="flex items-center gap-1.5 px-3 py-2 text-sm text-[#2563EB] hover:bg-blue-50 rounded-lg transition-colors"
+                    >
+                      <Plus size={14} />
+                      Add Option
+                    </button>
+                  </div>
+                )}
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-[#0F172A]">Map to Data Field</label>
+                  <select
+                    value={(fieldDraft.metadata?.key as string) || ""}
+                    onChange={(e) => setFieldDraft({ ...fieldDraft, metadata: { ...fieldDraft.metadata, key: e.target.value } })}
+                    className="w-full px-4 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition-all"
+                  >
+                    <option value="">-- Select a field to map --</option>
+                    {ENTITY_FIELDS[entityType].map((f) => (
+                      <option key={f.key} value={f.key}>{f.label}</option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-[#64748B]">Select which data field this form field maps to for submissions.</p>
+                </div>
+              </div>
+              <div className="flex gap-3 px-4 py-4 border-t border-[#E2E8F0] shrink-0">
+                <button
+                  onClick={closeFieldEditor}
+                  className="flex-1 px-4 py-2.5 border border-[#E2E8F0] text-[#0F172A] rounded-xl text-sm font-medium hover:bg-[#F8FAFC] transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={saveFieldDraft}
+                  className="flex-1 px-4 py-2.5 bg-[#2563EB] text-white rounded-xl text-sm font-medium hover:bg-[#1D4ED8] transition-colors flex items-center justify-center gap-2"
+                >
+                  <Save size={16} />
+                  Save Field
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </AnimatePresence>
   );
 }

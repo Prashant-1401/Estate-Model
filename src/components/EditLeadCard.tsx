@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, User, Phone, Mail, IndianRupee, MapPin, Building, Tag, Save } from "lucide-react";
-import type { Lead } from "@/lib/types";
+import type { Lead, LeadSource } from "@/lib/types";
+import { api } from "@/lib/api";
 
 interface EditLeadCardProps {
   isOpen: boolean;
@@ -25,6 +26,40 @@ export function EditLeadCard({ isOpen, onClose, onSubmit, lead }: EditLeadCardPr
     status: (lead?.status || "New") as string,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [sources, setSources] = useState<LeadSource[]>([]);
+
+  const loadSources = useCallback(async () => {
+    try {
+      const data = await api.get<LeadSource[]>("/api/config/lead-sources/all");
+      setSources(data);
+    } catch {
+      // Fallback is handled in render
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isOpen) {
+      void Promise.resolve().then(() => loadSources());
+    }
+  }, [isOpen, loadSources]);
+
+  useEffect(() => {
+    if (lead) {
+      void Promise.resolve().then(() => {
+        setFormData({
+          name: lead.name || "",
+          phone: lead.phone || "",
+          email: lead.email || "",
+          budget: lead.budget || "",
+          area: lead.area || "",
+          propertyType: lead.type || "",
+          source: lead.source || "",
+          notes: lead.requirement || "",
+          status: (lead.status || "New") as string,
+        });
+      });
+    }
+  }, [lead]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -160,11 +195,21 @@ export function EditLeadCard({ isOpen, onClose, onSubmit, lead }: EditLeadCardPr
                   <select value={formData.source} onChange={(e) => setFormData({ ...formData, source: e.target.value })}
                     className="w-full pl-10 pr-4 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition-all appearance-none">
                     <option value="">Select Source</option>
-                    <option value="Website">Website</option>
-                    <option value="Referral">Referral</option>
-                    <option value="Property Portal">Property Portal</option>
-                    <option value="Social Media">Social Media</option>
-                    <option value="Walk-in">Walk-in</option>
+                    {sources.length > 0 ? (
+                      sources.map((s) => (
+                        <option key={s.id} value={s.name}>
+                          {s.name}
+                        </option>
+                      ))
+                    ) : (
+                      <>
+                        <option value="Website">Website</option>
+                        <option value="Referral">Referral</option>
+                        <option value="Property Portal">Property Portal</option>
+                        <option value="Social Media">Social Media</option>
+                        <option value="Walk-in">Walk-in</option>
+                      </>
+                    )}
                   </select>
                 </div>
               </div>

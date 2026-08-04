@@ -7,13 +7,11 @@ import { useAuth } from "@/lib/auth-context";
 import { api } from "@/lib/api";
 import { useToast } from "@/lib/toast-context";
 import { usePaginatedData } from "@/lib/use-paginated-data";
+import { exportLeadsToCSV, exportUsersToCSV, exportDashboardStatsToCSV } from "@/lib/export";
 import { DashboardLayout } from "@/components/Layout";
 import { ConfigurableDashboard } from "@/components/dashboard/ConfigurableDashboard";
 import { LeadsTable } from "@/components/LeadsTable";
 import { CustomerProfile } from "@/components/CustomerProfile";
-import { AddLeadCard } from "@/components/AddLeadCard";
-import { AddPropertyCard } from "@/components/AddPropertyCard";
-import { AddProjectCard } from "@/components/AddProjectCard";
 import { PropertyCard } from "@/components/PropertyCard";
 import { PropertyDetailCard } from "@/components/PropertyDetailCard";
 import { UsersTable } from "@/components/UsersTable";
@@ -23,8 +21,10 @@ import { EditPropertyCard } from "@/components/EditPropertyCard";
 import { EditProjectCard } from "@/components/EditProjectCard";
 import { KanbanBoard } from "@/components/KanbanBoard";
 import { ComponentBuilder } from "@/components/admin/ComponentBuilder";
-import { Plus, Building2 as ProjectIcon, Edit2, Trash2, AlertTriangle, RefreshCw } from "lucide-react";
-import type { Property, Project, Lead, UserData, DashboardStats, FollowUp } from "@/lib/types";
+import { DynamicEntityForm } from "@/components/admin/DynamicEntityForm";
+import { Plus, Building2 as ProjectIcon, Edit2, Trash2, AlertTriangle, RefreshCw, Download } from "lucide-react";
+import type { Property, Project, Lead, UserData, DashboardStats, FollowUp, FormData as FormDataRecord, FormValue } from "@/lib/types";
+import type { EntityType as FormEntityType } from "@/lib/form-keys";
 import { Pagination } from "@/components/Pagination";
 
 const EMPTY_STATS: DashboardStats = {
@@ -37,9 +37,7 @@ function DashboardContent() {
   const { showToast } = useToast();
   const [activeView, setActiveView] = useState("dashboard");
   const [loading, setLoading] = useState(true);
-  const [isAddLeadOpen, setIsAddLeadOpen] = useState(false);
-  const [isAddPropertyOpen, setIsAddPropertyOpen] = useState(false);
-  const [isAddProjectOpen, setIsAddProjectOpen] = useState(false);
+  const [dynamicForm, setDynamicForm] = useState<{ entityType: FormEntityType } | null>(null);
   const [isAddUserOpen, setIsAddUserOpen] = useState(false);
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
@@ -55,6 +53,9 @@ function DashboardContent() {
   const users = usePaginatedData<UserData>("/api/users");
   const [followUps, setFollowUps] = useState<FollowUp[]>([]);
   const [allProjects, setAllProjects] = useState<Project[]>([]);
+  const [agents, setAgents] = useState<{ id: string; name: string }[]>([]);
+
+  const toStr = (v: FormValue | undefined): string => (v === null || v === undefined ? "" : String(v));
 
   async function loadFollowUps() {
     try {
@@ -87,26 +88,36 @@ function DashboardContent() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
+      try {
+        const res = await api.get<{ items: { id: string; name: string }[] }>("/api/users/agents");
+        if (!cancelled) setAgents(Array.isArray(res) ? res : (res?.items ?? []));
+      } catch {
+        // ignore
+      }
       await Promise.all([reloadStats(), loadFollowUps(), loadAllProjects()]);
       if (!cancelled) setLoading(false);
     })();
     return () => { cancelled = true; };
   }, []);
 
-  const handleAddLead = async (leadData: Record<string, string>) => {
+  const handleAddLead = async (data: FormDataRecord) => {
     try {
+      const assignedTo = toStr(data.assignedTo);
+      const assignedName = assignedTo
+        ? (agents.find((a) => a.id === assignedTo)?.name || assignedTo)
+        : "";
       await api.post("/api/leads", {
-        name: leadData.name,
-        phone: leadData.phone,
-        email: leadData.email,
-        budget: leadData.budget,
-        area: leadData.area,
-        type: leadData.propertyType,
-        source: leadData.source || "Direct",
+        name: toStr(data.name),
+        phone: toStr(data.phone),
+        email: toStr(data.email),
+        budget: toStr(data.budget),
+        area: toStr(data.area),
+        type: toStr(data.type),
+        source: toStr(data.source) || "Direct",
         status: "New",
-        assigned: leadData.assigned || "Unassigned",
-        assigned_to: leadData.assignedTo || null,
-        requirement: leadData.notes || "",
+        assigned: assignedName || "Unassigned",
+        assigned_to: assignedTo || null,
+        requirement: toStr(data.requirement),
         date: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
       });
       await Promise.all([leads.reload(), reloadStats()]);
@@ -117,8 +128,21 @@ function DashboardContent() {
     }
   };
 
-  const handleAddProperty = async (property: Property) => {
+  const handleAddProperty = async (data: FormDataRecord) => {
     try {
+      const property: Property = {
+        id: "",
+        title: toStr(data.title),
+        location: toStr(data.location),
+        price: toStr(data.price),
+        bedrooms: Number(toStr(data.bedrooms)) || 0,
+        bathrooms: Number(toStr(data.bathrooms)) || 0,
+        area: toStr(data.area),
+        type: toStr(data.type),
+        status: (toStr(data.status) || "Available") as Property["status"],
+        images: [],
+        project_id: toStr(data.project_id) || undefined,
+      };
       await api.post("/api/properties", property);
       await Promise.all([properties.reload(), reloadStats()]);
       showToast("Property added successfully", "success");
@@ -127,8 +151,21 @@ function DashboardContent() {
     }
   };
 
-  const handleAddProject = async (project: Project) => {
+  const handleAddProject = async (data: FormDataRecord) => {
     try {
+      const project: Project = {
+        id: "",
+        name: toStr(data.name),
+        developer: toStr(data.developer),
+        location: toStr(data.location),
+        status: (toStr(data.status) || "Planning") as Project["status"],
+        total_units: Number(toStr(data.total_units)) || 0,
+        units_sold: Number(toStr(data.units_sold)) || 0,
+        launch_date: toStr(data.launch_date),
+        completion_date: toStr(data.completion_date),
+        price_range: toStr(data.price_range),
+        description: toStr(data.description),
+      };
       await api.post("/api/projects", project);
       await Promise.all([projects.reload(), loadAllProjects(), reloadStats()]);
       showToast("Project created successfully", "success");
@@ -241,12 +278,47 @@ function DashboardContent() {
     }
   };
 
+  const handleExportLeads = () => {
+    exportLeadsToCSV(leads.items as Array<{
+      id: string;
+      name: string;
+      phone: string;
+      email?: string;
+      budget: string;
+      area: string;
+      status: string;
+      assigned: string;
+      date?: string;
+      source?: string;
+      requirement?: string;
+    }>);
+    showToast("Leads exported successfully", "success");
+  };
+
+  const handleExportUsers = () => {
+    exportUsersToCSV(users.items as Array<{
+      id: string;
+      name: string;
+      email: string;
+      phone?: string;
+      role: string;
+      status: string;
+      created: string;
+    }>);
+    showToast("Users exported successfully", "success");
+  };
+
+  const handleExportDashboard = () => {
+    exportDashboardStatsToCSV(stats);
+    showToast("Dashboard stats exported successfully", "success");
+  };
+
   const canManage = hasRole("admin", "manager");
 
   const renderView = () => {
     switch (activeView) {
       case "dashboard":
-        return <ConfigurableDashboard onAddLead={() => setIsAddLeadOpen(true)} stats={stats} />;
+        return <ConfigurableDashboard onAddLead={() => setDynamicForm({ entityType: "lead" })} stats={stats} onExport={handleExportDashboard} />;
       case "leads":
         return (
           <LeadsTable
@@ -263,10 +335,11 @@ function DashboardContent() {
             onSearchChange={leads.setSearch}
             statusFilter={leads.status}
             onStatusFilterChange={leads.setStatus}
-            onAddLead={() => setIsAddLeadOpen(true)}
+onAddLead={() => setDynamicForm({ entityType: "lead" })}
             onEdit={canManage ? (lead) => setEditingLead(lead) : undefined}
             onDelete={canManage ? (id) => setDeleteConfirm({ type: "lead", id }) : undefined}
             onViewCustomer={(lead) => { setSelectedCustomer(lead); setActiveView("customers"); }}
+            onExport={handleExportLeads}
           />
         );
       case "customers":
@@ -301,6 +374,7 @@ function DashboardContent() {
             onAddUser={() => setIsAddUserOpen(true)}
             onUpdateRole={handleUpdateUserRole}
             onToggleStatus={handleToggleUserStatus}
+            onExport={handleExportUsers}
           />
         );
       case "properties":
@@ -313,7 +387,7 @@ function DashboardContent() {
               </div>
               {canManage && (
                 <button
-                  onClick={() => setIsAddPropertyOpen(true)}
+                  onClick={() => setDynamicForm({ entityType: "property" })}
                   className="flex items-center gap-2 px-4 py-2 bg-[#2563EB] text-white rounded-xl text-sm font-medium hover:bg-[#1D4ED8] shadow-lg shadow-blue-500/20 transition-all"
                 >
                   <Plus size={18} />
@@ -401,7 +475,7 @@ function DashboardContent() {
               </div>
               {canManage && (
                 <button
-                  onClick={() => setIsAddProjectOpen(true)}
+                  onClick={() => setDynamicForm({ entityType: "project" })}
                   className="flex items-center gap-2 px-4 py-2 bg-[#2563EB] text-white rounded-xl text-sm font-medium hover:bg-[#1D4ED8] shadow-lg shadow-blue-500/20 transition-all"
                 >
                   <Plus size={18} />
@@ -526,7 +600,7 @@ function DashboardContent() {
           </div>
         );
       default:
-        return <ConfigurableDashboard onAddLead={() => setIsAddLeadOpen(true)} stats={stats} />;
+        return <ConfigurableDashboard onAddLead={() => setDynamicForm({ entityType: "lead" })} stats={stats} />;
     }
   };
 
@@ -543,7 +617,7 @@ function DashboardContent() {
 
   return (
     <>
-      <DashboardLayout activeView={activeView} setActiveView={setActiveView} onFabClick={() => setIsAddLeadOpen(true)}>
+      <DashboardLayout activeView={activeView} setActiveView={setActiveView} onFabClick={() => setDynamicForm({ entityType: "lead" })}>
         {statsError && (
           <div className="mb-6 flex items-center justify-between gap-4 bg-red-50 border border-red-100 rounded-2xl px-4 py-3">
             <div className="flex items-center gap-3 text-sm text-[#EF4444]">
@@ -558,23 +632,15 @@ function DashboardContent() {
         {renderView()}
       </DashboardLayout>
 
-      <AddLeadCard
-        isOpen={isAddLeadOpen}
-        onClose={() => setIsAddLeadOpen(false)}
-        onSubmit={handleAddLead}
-      />
-
-      <AddPropertyCard
-        isOpen={isAddPropertyOpen}
-        onClose={() => setIsAddPropertyOpen(false)}
-        onSubmit={handleAddProperty}
-        projects={allProjects}
-      />
-
-      <AddProjectCard
-        isOpen={isAddProjectOpen}
-        onClose={() => setIsAddProjectOpen(false)}
-        onSubmit={handleAddProject}
+      <DynamicEntityForm
+        isOpen={!!dynamicForm}
+        onClose={() => setDynamicForm(null)}
+        entityType={dynamicForm?.entityType || "lead"}
+        onSubmit={async (data, entityType) => {
+          if (entityType === "lead") await handleAddLead(data);
+          else if (entityType === "property") await handleAddProperty(data);
+          else if (entityType === "project") await handleAddProject(data);
+        }}
       />
 
       <PropertyDetailCard

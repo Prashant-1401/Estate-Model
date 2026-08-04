@@ -2,19 +2,39 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, FormInput, FileText } from "lucide-react";
-import { api } from "@/lib/api";
+import { X, FormInput, FileText, Building2, FolderOpen } from "lucide-react";
 import { useToast } from "@/lib/toast-context";
 import { DynamicFormRenderer } from "./DynamicFormRenderer";
+import { getEntityForms } from "@/lib/forms";
 import type { FormConfig, FormData } from "@/lib/types";
+import type { EntityType as FormEntityType } from "@/lib/form-keys";
 
-interface DynamicLeadFormProps {
+interface DynamicEntityFormProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: FormData) => Promise<void>;
+  entityType: FormEntityType;
+  onSubmit: (data: FormData, entityType: FormEntityType) => Promise<void>;
 }
 
-export function DynamicLeadForm({ isOpen, onClose, onSubmit }: DynamicLeadFormProps) {
+const ENTITY_TITLES: Record<FormEntityType, string> = {
+  lead: "Add New Lead",
+  property: "Add New Property",
+  project: "Add New Project",
+};
+
+const ENTITY_ICONS: Record<FormEntityType, React.ReactNode> = {
+  lead: <FormInput size={20} className="text-[#2563EB]" />,
+  property: <Building2 size={20} className="text-[#2563EB]" />,
+  project: <FolderOpen size={20} className="text-[#2563EB]" />,
+};
+
+const ENTITY_BG: Record<FormEntityType, string> = {
+  lead: "bg-blue-50",
+  property: "bg-green-50",
+  project: "bg-purple-50",
+};
+
+export function DynamicEntityForm({ isOpen, onClose, entityType, onSubmit }: DynamicEntityFormProps) {
   const { showToast } = useToast();
   const [forms, setForms] = useState<FormConfig[]>([]);
   const [selectedFormId, setSelectedFormId] = useState<string | null>(null);
@@ -23,23 +43,23 @@ export function DynamicLeadForm({ isOpen, onClose, onSubmit }: DynamicLeadFormPr
   const loadForms = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await api.get<{ items: FormConfig[] }>("/api/forms/all?entity_type=lead");
-      setForms(res.items || []);
-      if (res.items?.length === 1) {
-        setSelectedFormId(res.items[0].id);
+      const res = await getEntityForms(entityType);
+      setForms(res);
+      if (res.length === 1) {
+        setSelectedFormId(res[0].id);
       }
     } catch (e) {
       showToast(e instanceof Error ? e.message : "Failed to load forms", "error");
     } finally {
       setLoading(false);
     }
-  }, [showToast]);
+  }, [entityType, showToast]);
 
   useEffect(() => {
     if (isOpen) {
       void Promise.resolve().then(() => loadForms());
     }
-  }, [isOpen, loadForms]);
+  }, [isOpen, entityType, loadForms]);
 
   if (!isOpen) return null;
 
@@ -52,8 +72,8 @@ export function DynamicLeadForm({ isOpen, onClose, onSubmit }: DynamicLeadFormPr
           onClose();
         }}
         formId={selectedFormId}
-        onSubmit={onSubmit}
-        title="Add New Lead"
+        onSubmit={(data) => onSubmit(data, entityType)}
+        title={ENTITY_TITLES[entityType]}
       />
     );
   }
@@ -76,11 +96,11 @@ export function DynamicLeadForm({ isOpen, onClose, onSubmit }: DynamicLeadFormPr
         >
           <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-[#E2E8F0] shrink-0">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center">
-                <FormInput size={20} className="text-[#2563EB]" />
+              <div className={`w-10 h-10 ${ENTITY_BG[entityType]} rounded-xl flex items-center justify-center`}>
+                {ENTITY_ICONS[entityType]}
               </div>
               <div>
-                <h2 className="text-lg sm:text-xl font-semibold text-[#0F172A]">Add New Lead</h2>
+                <h2 className="text-lg sm:text-xl font-semibold text-[#0F172A]">{ENTITY_TITLES[entityType]}</h2>
                 <p className="text-xs sm:text-sm text-[#64748B] mt-0.5">Select a form to use</p>
               </div>
             </div>
@@ -99,7 +119,7 @@ export function DynamicLeadForm({ isOpen, onClose, onSubmit }: DynamicLeadFormPr
                 <FileText size={48} className="mx-auto text-[#64748B] mb-4" />
                 <h3 className="text-lg font-medium text-[#0F172A]">No forms configured</h3>
                 <p className="text-[#64748B] mt-1 text-sm">
-                  Create a lead form in Form Builder first.
+                  Create a {entityType} form in Form Builder first.
                 </p>
               </div>
             ) : (

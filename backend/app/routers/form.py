@@ -49,7 +49,7 @@ async def list_forms(
 async def list_all_forms(
     entity_type: str = "",
     db: AsyncSession = Depends(get_db),
-    _=Depends(require_role(Role.ADMIN, Role.MANAGER)),
+    _=Depends(require_role(Role.ADMIN, Role.MANAGER, Role.AGENT)),
 ):
     stmt = select(Form).where(Form.is_active == True).order_by(Form.name)
     if entity_type:

@@ -1,5 +1,5 @@
 from datetime import datetime
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class FieldOptionBase(BaseModel):
@@ -61,8 +61,9 @@ class FormFieldRead(FormFieldBase):
     options: list[FieldOptionRead] = []
     is_active: bool = True
     created_at: datetime | None = None
+    metadata: dict = Field(default_factory=dict, validation_alias="metadata_")
 
-    model_config = {"from_attributes": True}
+    model_config = {"from_attributes": True, "populate_by_name": True}
 
 
 class FormSectionBase(BaseModel):

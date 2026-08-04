@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   X, Save, Type, Hash, Mail, Phone, Calendar, Clock,
   List, CheckSquare, Upload, MapPin, DollarSign,
+  Users, Building2,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { useToast } from "@/lib/toast-context";
@@ -35,6 +36,8 @@ const FIELD_ICONS: Record<string, LucideIcon> = {
   textarea: Type,
   file: Upload,
   location: MapPin,
+  agent: Users,
+  project: Building2,
 };
 
 export function DynamicFormRenderer({
@@ -51,6 +54,8 @@ export function DynamicFormRenderer({
   const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState<FormData>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [agents, setAgents] = useState<{ id: string; name: string }[]>([]);
+  const [projects, setProjects] = useState<{ id: string; name: string }[]>([]);
 
   const loadForm = useCallback(async () => {
     try {
@@ -63,6 +68,24 @@ export function DynamicFormRenderer({
       setLoading(false);
     }
   }, [formId, showToast]);
+
+  // Load agents and projects for special field types
+  useEffect(() => {
+    const loadAgents = async () => {
+      try {
+        const res = await api.get<{ items: { id: string; name: string }[] }>("/api/users/agents");
+        setAgents(Array.isArray(res) ? res : (res?.items ?? []));
+      } catch {}
+    };
+    const loadProjects = async () => {
+      try {
+        const res = await api.get<{ items: { id: string; name: string }[] }>("/api/projects?per_page=100");
+        setProjects(Array.isArray(res) ? res : (res?.items ?? []));
+      } catch {}
+    };
+    loadAgents();
+    loadProjects();
+  }, []);
 
   useEffect(() => {
     if (isOpen && formId) {
@@ -140,7 +163,8 @@ export function DynamicFormRenderer({
       if (form) {
         form.sections.forEach((section) => {
           section.fields.forEach((field) => {
-            payload[field.label] = formData[field.id];
+            const key = (field.metadata?.key as string) || field.label;
+            payload[key] = formData[field.id];
           });
         });
       }
@@ -418,6 +442,56 @@ export function DynamicFormRenderer({
                   </button>
                 );
               })}
+            </div>
+            {field.help_text && <p className="text-xs text-[#64748B]">{field.help_text}</p>}
+            {error && <p className="text-xs text-red-500">{error}</p>}
+          </div>
+        );
+
+      case "agent":
+        return (
+          <div key={field.id} className="space-y-1.5">
+            <label className="text-sm font-medium text-[#0F172A]">
+              {field.label} {field.is_required && "*"}
+            </label>
+            <div className="relative">
+              <Icon className="absolute left-3 top-1/2 -translate-y-1/2 text-[#64748B]" size={18} />
+              <select
+                value={value}
+                onChange={(e) => handleChange(e.target.value)}
+                disabled={field.is_read_only}
+                className={`${baseInputClass} appearance-none`}
+              >
+                <option value="">{field.placeholder || "Select agent..."}</option>
+                {agents.map((a) => (
+                  <option key={a.id} value={a.id}>{a.name}</option>
+                ))}
+              </select>
+            </div>
+            {field.help_text && <p className="text-xs text-[#64748B]">{field.help_text}</p>}
+            {error && <p className="text-xs text-red-500">{error}</p>}
+          </div>
+        );
+
+      case "project":
+        return (
+          <div key={field.id} className="space-y-1.5">
+            <label className="text-sm font-medium text-[#0F172A]">
+              {field.label} {field.is_required && "*"}
+            </label>
+            <div className="relative">
+              <Icon className="absolute left-3 top-1/2 -translate-y-1/2 text-[#64748B]" size={18} />
+              <select
+                value={value}
+                onChange={(e) => handleChange(e.target.value)}
+                disabled={field.is_read_only}
+                className={`${baseInputClass} appearance-none`}
+              >
+                <option value="">{field.placeholder || "Select project..."}</option>
+                {projects.map((p) => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
             </div>
             {field.help_text && <p className="text-xs text-[#64748B]">{field.help_text}</p>}
             {error && <p className="text-xs text-red-500">{error}</p>}
