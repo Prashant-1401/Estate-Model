@@ -100,10 +100,11 @@ All routes below `/api/*` are proxied through Next.js and can also be hit direct
 | GET | `/api/auth/me` | Current authenticated user |
 | POST | `/api/auth/logout` | Clears the session cookie |
 | GET | `/api/dashboard/stats` | Dashboard stats (incl. `revenue_mtd`) |
-| GET/POST | `/api/leads`, `/api/properties`, `/api/projects`, `/api/users`, `/api/inquiries` | List (paginated) / create |
+| GET/POST | `/api/leads`, `/api/properties`, `/api/projects`, `/api/users` | List (paginated) / create |
 | GET/PUT/DELETE | `/api/{resource}/{id}` | Read / update / delete a record |
+| POST | `/api/public/leads` | Public lead capture (no auth) — used by the `/add-lead` form; forces `source=Website`, `status=New`, `assigned=Unassigned` |
 
-`POST /api/leads` is intentionally public so the "Get in touch" form (`/get-in-touch`) can submit leads without authentication.
+The authenticated `POST /api/leads` requires a valid session (used inside the CRM). The public marketing form (`/add-lead`) submits to `POST /api/public/leads`, which needs no authentication.
 
 ## Deployment
 

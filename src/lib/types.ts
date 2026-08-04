@@ -302,6 +302,16 @@ export type DropdownCategory =
   | "project_status"
   | "followup_status";
 
+export interface Dropdown {
+  id: string;
+  key: string;
+  label: string;
+  description: string;
+  sort_order: number;
+  is_active: boolean;
+  created_at?: string;
+}
+
 export interface DropdownOption {
   id: string;
   category: DropdownCategory;

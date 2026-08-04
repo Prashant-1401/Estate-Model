@@ -28,3 +28,18 @@ class DropdownRead(DropdownBase):
     created_at: datetime | None = None
 
     model_config = {"from_attributes": True}
+
+
+class DropdownCategoryBase(BaseModel):
+    key: str
+    label: str
+    description: str = ""
+    sort_order: int = 0
+
+
+class DropdownCategoryRead(DropdownCategoryBase):
+    id: str
+    is_active: bool = True
+    created_at: datetime | None = None
+
+    model_config = {"from_attributes": True}

@@ -5,8 +5,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, ListChecks, Plus, Edit2, Trash2, ChevronUp, ChevronDown } from "lucide-react";
 import { api } from "@/lib/api";
 import { useToast } from "@/lib/toast-context";
-import { DROPDOWN_CATEGORIES } from "@/lib/dropdowns";
-import type { DropdownCategory, DropdownOption } from "@/lib/types";
+import { useDropdowns } from "@/lib/dropdowns";
+import type { DropdownOption } from "@/lib/types";
 
 interface DropdownBuilderProps {
   isOpen: boolean;
@@ -21,7 +21,8 @@ const COLORS = [
 
 export function DropdownBuilder({ isOpen, onClose, embedded = false }: DropdownBuilderProps) {
   const { showToast } = useToast();
-  const [category, setCategory] = useState<DropdownCategory>("budget");
+  const { dropdowns, loading: categoriesLoading } = useDropdowns();
+  const [category, setCategory] = useState<string>("budget");
   const [options, setOptions] = useState<DropdownOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingOption, setEditingOption] = useState<DropdownOption | null>(null);
@@ -32,11 +33,16 @@ export function DropdownBuilder({ isOpen, onClose, embedded = false }: DropdownB
     color: "",
   });
 
+  const activeCategory =
+    dropdowns.length > 0 && !dropdowns.some((d) => d.key === category)
+      ? dropdowns[0].key
+      : category;
+
   const loadOptions = useCallback(async () => {
     try {
       setLoading(true);
       const res = await api.get<{ items: DropdownOption[] }>(
-        `/api/dropdowns?per_page=100&category=${category}`
+        `/api/dropdowns?per_page=100&category=${activeCategory}`
       );
       setOptions(res.items || []);
     } catch (e) {
@@ -44,13 +50,13 @@ export function DropdownBuilder({ isOpen, onClose, embedded = false }: DropdownB
     } finally {
       setLoading(false);
     }
-  }, [category, showToast]);
+  }, [activeCategory, showToast]);
 
   useEffect(() => {
     if (isOpen) void Promise.resolve().then(() => loadOptions());
   }, [isOpen, loadOptions]);
 
-  const switchCategory = (next: DropdownCategory) => {
+  const switchCategory = (next: string) => {
     setCategory(next);
     setEditingOption(null);
     setIsCreating(false);
@@ -63,7 +69,7 @@ export function DropdownBuilder({ isOpen, onClose, embedded = false }: DropdownB
       return;
     }
     const payload = {
-      category,
+      category: activeCategory,
       label: formData.label.trim(),
       value: formData.value.trim(),
       color: formData.color,
@@ -155,19 +161,23 @@ export function DropdownBuilder({ isOpen, onClose, embedded = false }: DropdownB
 
           <div className="p-4 sm:p-6 overflow-y-auto flex-1">
             <div className="flex flex-wrap gap-2 mb-6">
-              {DROPDOWN_CATEGORIES.map((cat) => (
-                <button
-                  key={cat.id}
-                  onClick={() => switchCategory(cat.id)}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                    category === cat.id
-                      ? "bg-[#2563EB] text-white"
-                      : "bg-[#F8FAFC] text-[#64748B] border border-[#E2E8F0] hover:text-[#0F172A]"
-                  }`}
-                >
-                  {cat.label}
-                </button>
-              ))}
+              {categoriesLoading ? (
+                <span className="text-sm text-[#64748B]">Loading dropdowns...</span>
+              ) : (
+                dropdowns.map((dropdown) => (
+                  <button
+                    key={dropdown.key}
+                    onClick={() => switchCategory(dropdown.key)}
+                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                      activeCategory === dropdown.key
+                        ? "bg-[#2563EB] text-white"
+                        : "bg-[#F8FAFC] text-[#64748B] border border-[#E2E8F0] hover:text-[#0F172A]"
+                    }`}
+                  >
+                    {dropdown.label}
+                  </button>
+                ))
+              )}
             </div>
 
             {isCreating && (

@@ -105,10 +105,11 @@ function TableWidget({ title, columns, data, renderRow }: TableWidgetProps) {
 
 interface ListWidgetProps {
   title: string;
-  items: { id: string; title: string; subtitle: string; status?: string }[];
+  items: { id: string; title: string; subtitle: string; status?: string; leadId?: string }[];
+  onItemClick?: (item: { id: string; title: string; subtitle: string; status?: string; leadId?: string }) => void;
 }
 
-function ListWidget({ title, items }: ListWidgetProps) {
+function ListWidget({ title, items, onItemClick }: ListWidgetProps) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -125,7 +126,11 @@ function ListWidget({ title, items }: ListWidgetProps) {
           </div>
         ) : (
           items.map((item) => (
-            <div key={item.id} className="px-6 py-3 hover:bg-[#F8FAFC] transition-colors">
+            <div
+              key={item.id}
+              onClick={() => onItemClick?.(item)}
+              className={`px-6 py-3 hover:bg-[#F8FAFC] transition-colors ${onItemClick ? "cursor-pointer" : ""}`}
+            >
               <p className="text-sm font-medium text-[#0F172A]">{item.title}</p>
               <p className="text-xs text-[#64748B]">{item.subtitle}</p>
             </div>
@@ -139,10 +144,11 @@ function ListWidget({ title, items }: ListWidgetProps) {
 interface ConfigurableDashboardProps {
   stats: DashboardStats;
   onAddLead: () => void;
+  onOpenLead?: (leadOrId: Lead | string) => void;
   onExport?: (stats: DashboardStats) => void;
 }
 
-export function ConfigurableDashboard({ stats, onAddLead, onExport }: ConfigurableDashboardProps) {
+export function ConfigurableDashboard({ stats, onAddLead, onOpenLead, onExport }: ConfigurableDashboardProps) {
   const { showToast } = useToast();
   const { statuses } = useLeadStatuses();
   const statusColorMap = useMemo(
@@ -278,7 +284,8 @@ export function ConfigurableDashboard({ stats, onAddLead, onExport }: Configurab
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: i * 0.05 }}
-                className="hover:bg-[#F8FAFC] transition-colors"
+                onClick={() => onOpenLead?.(lead)}
+                className={`hover:bg-[#F8FAFC] transition-colors ${onOpenLead ? "cursor-pointer" : ""}`}
               >
                 <td className="px-6 py-4 text-sm font-medium text-[#0F172A]">{lead.name}</td>
                 <td className="px-6 py-4 text-sm text-[#64748B]">{lead.phone}</td>
@@ -301,7 +308,9 @@ export function ConfigurableDashboard({ stats, onAddLead, onExport }: Configurab
               title: fu.lead_name,
               subtitle: `${fu.time} - ${fu.property_title || "No property"}`,
               status: fu.status,
+              leadId: fu.lead_id,
             }))}
+            onItemClick={(item) => item.leadId && onOpenLead?.(item.leadId)}
           />
         )}
       </div>

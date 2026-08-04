@@ -2,19 +2,36 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { api } from "@/lib/api";
-import type { DropdownCategory, DropdownOption } from "@/lib/types";
+import type { Dropdown, DropdownOption } from "@/lib/types";
 
-export const DROPDOWN_CATEGORIES: { id: DropdownCategory; label: string }[] = [
-  { id: "budget", label: "Budget Range" },
-  { id: "area", label: "Preferred Area" },
-  { id: "property_type", label: "Property Type" },
-  { id: "property_status", label: "Property Status" },
-  { id: "project_status", label: "Project Status" },
-  { id: "followup_status", label: "Follow-up Status" },
-];
+export async function fetchDropdowns(): Promise<Dropdown[]> {
+  try {
+    const res = await api.get<Dropdown[]>("/api/dropdowns/list");
+    return Array.isArray(res) ? res : [];
+  } catch {
+    return [];
+  }
+}
+
+export function useDropdowns() {
+  const [dropdowns, setDropdowns] = useState<Dropdown[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setDropdowns(await fetchDropdowns());
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    void Promise.resolve().then(() => load());
+  }, [load]);
+
+  return { dropdowns, loading, reload: load };
+}
 
 export async function fetchDropdownOptions(
-  category: DropdownCategory
+  category: string
 ): Promise<DropdownOption[]> {
   try {
     const res = await api.get<DropdownOption[]>(`/api/dropdowns/all?category=${category}`);
@@ -24,7 +41,7 @@ export async function fetchDropdownOptions(
   }
 }
 
-export function useDropdownOptions(category: DropdownCategory) {
+export function useDropdownOptions(category: string) {
   const [options, setOptions] = useState<DropdownOption[]>([]);
   const [loading, setLoading] = useState(true);
 

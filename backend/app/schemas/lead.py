@@ -22,6 +22,16 @@ class LeadCreate(LeadBase):
     pass
 
 
+class PublicLeadCreate(BaseModel):
+    name: str
+    phone: str
+    email: str = ""
+    budget: str = ""
+    area: str = ""
+    type: str = ""
+    requirement: str = ""
+
+
 class LeadUpdate(BaseModel):
     name: str | None = None
     phone: str | None = None

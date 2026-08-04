@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
@@ -91,6 +91,22 @@ function DashboardContent() {
       setStatsError(e instanceof Error ? e.message : "Failed to load dashboard data");
     }
   }
+
+  const openLead = useCallback(async (leadOrId: Lead | string) => {
+    let lead: Lead | null = typeof leadOrId === "string" ? (leads.items.find((l) => l.id === leadOrId) ?? null) : leadOrId;
+    if (typeof leadOrId === "string" && !lead) {
+      try {
+        lead = await api.get<Lead>(`/api/leads/${leadOrId}`);
+      } catch {
+        showToast("Lead not found", "error");
+        return;
+      }
+    }
+    if (lead) {
+      setSelectedCustomer(lead);
+      setActiveView("customers");
+    }
+  }, [leads.items, showToast]);
 
   useEffect(() => {
     let cancelled = false;
@@ -325,7 +341,7 @@ function DashboardContent() {
   const renderView = () => {
     switch (activeView) {
       case "dashboard":
-        return <ConfigurableDashboard onAddLead={() => setDynamicForm({ entityType: "lead" })} stats={stats} onExport={handleExportDashboard} />;
+        return <ConfigurableDashboard onOpenLead={openLead} onAddLead={() => setDynamicForm({ entityType: "lead" })} stats={stats} onExport={handleExportDashboard} />;
       case "leads":
         return (
           <LeadsTable
@@ -345,7 +361,7 @@ function DashboardContent() {
 onAddLead={() => setDynamicForm({ entityType: "lead" })}
             onEdit={canManage ? (lead) => setEditingLead(lead) : undefined}
             onDelete={canManage ? (id) => setDeleteConfirm({ type: "lead", id }) : undefined}
-            onViewCustomer={(lead) => { setSelectedCustomer(lead); setActiveView("customers"); }}
+            onViewCustomer={(lead) => openLead(lead)}
             onExport={handleExportLeads}
           />
         );
@@ -577,6 +593,7 @@ onAddLead={() => setDynamicForm({ entityType: "lead" })}
           <KanbanBoard
             items={followUps}
             onRefresh={loadFollowUps}
+            onOpenLead={openLead}
           />
         );
       case "settings":
@@ -602,7 +619,7 @@ onAddLead={() => setDynamicForm({ entityType: "lead" })}
           </div>
         );
       default:
-        return <ConfigurableDashboard onAddLead={() => setDynamicForm({ entityType: "lead" })} stats={stats} />;
+        return <ConfigurableDashboard onOpenLead={openLead} onAddLead={() => setDynamicForm({ entityType: "lead" })} stats={stats} />;
     }
   };
 

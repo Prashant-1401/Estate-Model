@@ -39,9 +39,10 @@ function buildColumns(options: { label: string; value: string }[]): FollowUpColu
 interface KanbanBoardProps {
   items: FollowUp[];
   onRefresh: () => void;
+  onOpenLead?: (leadId: string) => void;
 }
 
-export function KanbanBoard({ items, onRefresh }: KanbanBoardProps) {
+export function KanbanBoard({ items, onRefresh, onOpenLead }: KanbanBoardProps) {
   const { showToast } = useToast();
   const [showAddCard, setShowAddCard] = useState<FollowUpStatus | null>(null);
   const [editingItem, setEditingItem] = useState<FollowUp | null>(null);
@@ -120,29 +121,30 @@ export function KanbanBoard({ items, onRefresh }: KanbanBoardProps) {
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, scale: 0.95 }}
-                      className="bg-white p-4 rounded-xl border border-[#E2E8F0] shadow-sm hover:shadow-md transition-shadow"
+                      onClick={() => onOpenLead?.(item.lead_id)}
+                      className={`bg-white p-4 rounded-xl border border-[#E2E8F0] shadow-sm hover:shadow-md transition-shadow ${onOpenLead ? "cursor-pointer" : ""}`}
                     >
                       <div className="flex items-start justify-between mb-2">
                         <span className="text-xs font-semibold text-[#2563EB]">{item.lead_id}</span>
                         <div className="relative">
                           <button
-                            onClick={() => setMenuOpen(menuOpen === item.id ? null : item.id)}
+                            onClick={(e) => { e.stopPropagation(); setMenuOpen(menuOpen === item.id ? null : item.id); }}
                             className="p-1 hover:bg-[#F1F5F9] rounded-lg transition-colors"
                           >
                             <MoreHorizontal size={14} className="text-[#64748B]" />
                           </button>
                           {menuOpen === item.id && (
                             <>
-                              <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(null)} />
+                              <div className="fixed inset-0 z-10" onClick={(e) => { e.stopPropagation(); setMenuOpen(null); }} />
                               <div className="absolute right-0 top-full mt-1 w-36 bg-white border border-[#E2E8F0] rounded-xl shadow-lg z-20 py-1">
                                 <button
-                                  onClick={() => { setEditingItem(item); setMenuOpen(null); }}
+                                  onClick={(e) => { e.stopPropagation(); setEditingItem(item); setMenuOpen(null); }}
                                   className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[#0F172A] hover:bg-[#F8FAFC]"
                                 >
                                   <Edit2 size={14} /> Edit
                                 </button>
                                 <button
-                                  onClick={() => handleDelete(item.id)}
+                                  onClick={(e) => { e.stopPropagation(); handleDelete(item.id); }}
                                   className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[#EF4444] hover:bg-red-50"
                                 >
                                   <Trash2 size={14} /> Delete
@@ -184,7 +186,7 @@ export function KanbanBoard({ items, onRefresh }: KanbanBoardProps) {
                           .map((c) => (
                             <button
                               key={c.id}
-                              onClick={() => handleStatusChange(item.id, c.id)}
+                              onClick={(e) => { e.stopPropagation(); handleStatusChange(item.id, c.id); }}
                               className="flex-1 px-2 py-1.5 text-xs font-medium text-[#64748B] hover:bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg transition-colors"
                             >
                               → {c.label}

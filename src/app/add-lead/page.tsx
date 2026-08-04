@@ -43,17 +43,14 @@ export default function AddLeadPage() {
 
     setLoading(true);
     try {
-      await api.post("/api/leads", {
+      await api.post("/api/public/leads", {
         name: formData.name,
         phone: formData.phone,
         email: formData.email,
         budget: formData.budget,
         area: formData.area,
         type: formData.propertyType,
-        source: "Website",
-        status: "New",
-        assigned: "Unassigned",
-        date: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+        requirement: formData.message,
       });
       setSubmitted(true);
     } catch {

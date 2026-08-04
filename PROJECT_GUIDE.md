@@ -115,7 +115,7 @@ Every authenticated endpoint:
 
 ### Public vs protected endpoints
 
-Public (no token): `POST /api/auth/login`, `GET /api/company`, `GET /api/forms/{id}/render`, `GET /api/config/statuses/all`, `GET /api/config/lead-sources/all`, `GET /api/dashboard-config/widgets/all`, `GET /` (FastAPI root). Everything else requires a Bearer token.
+Public (no token): `POST /api/auth/login`, `POST /api/public/leads`, `GET /api/company`, `GET /api/forms/{id}/render`, `GET /api/config/statuses/all`, `GET /api/config/lead-sources/all`, `GET /api/dropdowns/all`, `GET /api/dropdowns/list`, `GET /api/dashboard-config/widgets/all`, `GET /` (FastAPI root). Everything else requires a Bearer token.
 
 ---
 
@@ -130,10 +130,9 @@ Public (no token): `POST /api/auth/login`, `GET /api/company`, `GET /api/forms/{
 ### 4.2 `/add-lead` — `src/app/add-lead/page.tsx`
 
 Public lead-capture form ("Find Your Dream Property"):
-- Fields: name*, phone*, email, budget (range select), area (select), property type (select), message (lines 12–20).
-- `validate()` (lines 22–28): name required; phone must be ≥7 digits after stripping `[\s\-+]`.
-- `handleSubmit` (lines 30–60): `POST /api/leads` with `source: "Website"`, `status: "New"`, `assigned: "Unassigned"`, and a formatted display date (lines 42–53). On success shows a thank-you screen (lines 62–89).
-- ⚠️ **Auth mismatch (known gap):** `POST /api/leads` requires a role on the backend (`backend/app/routers/lead.py:54`) and the proxy only adds a Bearer header when a cookie exists (`route.ts:20`). Anonymous visitors therefore receive 401/403. See §10.
+- Fields: name*, phone*, email, budget, area, property type, message.
+- `validate()`: name required; phone must be ≥7 digits after stripping `[\s\-+]`.
+- `handleSubmit`: `POST /api/public/leads` — a public endpoint (`backend/app/routers/public.py`) that needs no session. It accepts `name/phone/email/budget/area/type/requirement` and forces `source: "Website"`, `status: "New"`, `assigned: "Unassigned"`, plus a server-side display date. On success shows a thank-you screen.
 
 ---
 
@@ -180,9 +179,7 @@ All handlers show a toast on success and surface the thrown error via toast on f
 | `projects` | Inline projects table + `Pagination` | all |
 | `follow-ups` | `KanbanBoard` | all |
 | `settings` / `help` | Static placeholder panels | all |
-| `roles` | `RolesManager` + `PermissionsMatrix` launcher | admin |
-| `forms` | `FormBuilder` | admin |
-| `statuses`, `lead-sources`, `notifications`, `workflows`, `company` | Heading + modal launcher buttons for each admin component | admin |
+| `components` | `ComponentBuilder` (sub-tabs: Forms, Statuses, Lead Sources, Dropdowns, Notifications, Workflows, Roles & Permissions, Company) | admin |
 | (default) | `ConfigurableDashboard` | all |
 
 ### 5.4 Modals & shell (lines 704–838)
@@ -285,6 +282,8 @@ Routers are mounted in `backend/app/main.py:60–75`. Common pattern: `require_r
 | `workflow.router` | `/api/workflows` | GET list/id (admin,manager, steps hydrated); POST/PUT/DELETE (admin) |
 | `notification.router` | `/api/notifications` | templates + rules CRUD (GET admin,manager; write admin) |
 | `config.router` | `/api/config` | statuses CRUD (+ public `all`); lead-sources CRUD (+ public `all`) |
+| `dropdown.router` | `/api/dropdowns` | options CRUD (GET admin,manager; write admin); `GET /all` (public, optional `category`); `GET /list` (public — master dropdown registry) |
+| `public.router` | `/api/public` | `POST /leads` (public lead capture → forces source Website / status New / assigned Unassigned) |
 | `dashboard_config.router` | `/api/dashboard-config` | widgets CRUD (+ public `all`); `my-dashboard` GET/PUT (any auth, auto-creates) |
 
 ### Startup behavior (`backend/app/main.py:22–47`)
@@ -329,6 +328,7 @@ All tables use string PKs + `created_at`/`updated_at`; **no ForeignKeys** — re
 | `workflows` / `workflow_steps` | JSONB config, sort_order | |
 | `notification_templates` / `notification_rules` | JSONB variables/recipients/conditions | |
 | `statuses` / `lead_sources` | entity_type, slug, color/sort_order; unique slug | |
+| `dropdowns` / `dropdown_options` | master registry (key/label) + per-dropdown options (category=key, value/color/sort_order) | |
 | `dashboard_widgets` / `user_dashboards` | JSONB config/layout | |
 | `companies` | name, logo, email, phone, address, gst_number, currency (INR), timezone, working_hours, settings (JSONB), is_active | single active company |
 
@@ -340,13 +340,11 @@ Seed (`backend/app/seed.py`) is idempotent and runs at every startup: 3 demo use
 
 ## 10. Known Gaps & Notes (read before changing behavior)
 
-1. **Public lead form broken for anonymous visitors.** `POST /api/leads` requires a role (`backend/app/routers/lead.py:54`), but `/add-lead` submits without a token and the proxy only injects Bearer when a cookie exists (`route.ts:20`). Either make that endpoint public or require auth on the form.
-2. **Two latent runtime `NameError`s:** `FieldOptionRead` used without import at `backend/app/routers/form.py:104` and `:155` (breaks `GET /api/forms/{id}` and `/render`); `WorkflowStepRead` at `backend/app/routers/workflow.py:52` (breaks `GET /api/workflows/{id}`).
-3. **RBAC is decorative.** The seeded permissions/role_permissions matrix is CRUD-able and shown in admin UIs, but route guards only use the role string. `GET /api/permissions/matrix` returns an all-`False` stub (`role.py:248`). DB roles like `super_admin`/`read_only` have no effect on API access.
-4. **Stale README:** documents `/api/inquiries` (deleted in commit `66df913`) and says `POST /api/leads` is public (it isn't).
-5. **Dead components** (defined, never imported): `src/components/DashboardView.tsx`, `src/components/ManagerPanel.tsx`, `src/components/admin/DynamicLeadForm.tsx`.
-6. **Loose semantics:** lead `status` is free text ("Hot") while the `statuses` table uses slugs ("hot"); `Lead.date` and `User.created` are display strings, not timestamps; follow-up `status` is a bucket, not a lead status.
-7. **No data-level integrity:** no FKs — deleting a module/status doesn't clean up dependents.
+1. **RBAC is decorative.** The seeded permissions/role_permissions matrix is CRUD-able and shown in admin UIs, but route guards only use the role string. `GET /api/permissions/matrix` returns an all-`False` stub (`role.py:248`). DB roles like `super_admin`/`read_only` have no effect on API access.
+2. **Loose semantics:** lead `status` is free text ("Hot") while the `statuses` table uses slugs ("hot"); `Lead.date` and `User.created` are display strings, not timestamps; follow-up `status` is a bucket, not a lead status.
+3. **No data-level integrity:** no FKs — deleting a module/status doesn't clean up dependents. Deleting a dropdown option keeps any record that already uses that value.
+4. **Static placeholder UI:** CustomerProfile "Recommended Properties"/"Properties Viewed"/"Next Follow-up" and the dashboard quick stats (12.5% conversion, 2.4 hrs) are hardcoded, not computed from data.
+5. **Public endpoints (no auth):** `POST /api/auth/login`, `POST /api/public/leads`, `GET /api/company`, `GET /api/forms/{id}/render`, `GET /api/config/statuses/all`, `GET /api/config/lead-sources/all`, `GET /api/dropdowns/all`, `GET /api/dropdowns/list`, `GET /api/dashboard-config/widgets/all`, `GET /`.
 
 ---
 

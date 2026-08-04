@@ -20,7 +20,7 @@ from app.models.status import Status
 from app.models.lead_source import LeadSource
 from app.models.dashboard_widget import DashboardWidget, UserDashboard
 from app.models.activity import Activity
-from app.models.dropdown import DropdownOption
+from app.models.dropdown import Dropdown, DropdownOption
 
 __all__ = [
     "Lead",

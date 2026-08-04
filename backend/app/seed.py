@@ -16,7 +16,7 @@ from app.models.lead import Lead
 from app.models.property import Property
 from app.models.project import Project
 from app.models.follow_up import FollowUp
-from app.models.dropdown import DropdownOption
+from app.models.dropdown import Dropdown, DropdownOption
 from app.auth import hash_password
 
 
@@ -70,6 +70,15 @@ DEFAULT_LEAD_SOURCES = [
     {"name": "Direct Walk-In", "slug": "direct-walk-in", "icon": "Footprints", "sort_order": 7},
     {"name": "Website", "slug": "website", "icon": "Globe", "sort_order": 8},
     {"name": "Referral", "slug": "referral", "icon": "UserPlus", "sort_order": 9},
+]
+
+DEFAULT_DROPDOWNS = [
+    {"key": "budget", "label": "Budget Range", "description": "Lead budget ranges", "sort_order": 0},
+    {"key": "area", "label": "Preferred Area", "description": "Preferred project areas", "sort_order": 1},
+    {"key": "property_type", "label": "Property Type", "description": "Types of property", "sort_order": 2},
+    {"key": "property_status", "label": "Property Status", "description": "Availability status of properties", "sort_order": 3},
+    {"key": "project_status", "label": "Project Status", "description": "Development status of projects", "sort_order": 4},
+    {"key": "followup_status", "label": "Follow-up Status", "description": "Follow-up pipeline statuses", "sort_order": 5},
 ]
 
 DEFAULT_DROPDOWN_OPTIONS = [
@@ -237,6 +246,14 @@ async def seed_lead_sources(db):
 
 
 async def seed_dropdowns(db):
+    for dropdown_data in DEFAULT_DROPDOWNS:
+        result = await db.execute(select(Dropdown).where(Dropdown.key == dropdown_data["key"]))
+        if result.scalar_one_or_none():
+            continue
+        dropdown_id = f"DL-{int(time.time() * 1000)}-{dropdown_data['key'][:3].upper()}"
+        dropdown = Dropdown(id=dropdown_id, **dropdown_data)
+        db.add(dropdown)
+    await db.flush()
     for option_data in DEFAULT_DROPDOWN_OPTIONS:
         result = await db.execute(
             select(DropdownOption).where(

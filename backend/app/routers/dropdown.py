@@ -4,8 +4,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.models.dropdown import DropdownOption
-from app.schemas.dropdown import DropdownCreate, DropdownRead, DropdownUpdate
+from app.models.dropdown import Dropdown, DropdownOption
+from app.schemas.dropdown import DropdownCategoryRead, DropdownCreate, DropdownRead, DropdownUpdate
 from app.schemas.common import Page
 from app.pagination import paginate
 from app.auth import require_role
@@ -43,6 +43,19 @@ async def list_all_dropdowns(
         stmt = stmt.where(DropdownOption.category == category)
     result = await db.execute(stmt)
     return [DropdownRead.model_validate(o) for o in result.scalars().all()]
+
+
+@router.get("/list", response_model=list[DropdownCategoryRead])
+async def list_dropdown_categories(
+    db: AsyncSession = Depends(get_db),
+):
+    stmt = (
+        select(Dropdown)
+        .where(Dropdown.is_active == True)
+        .order_by(Dropdown.sort_order, Dropdown.label)
+    )
+    result = await db.execute(stmt)
+    return [DropdownCategoryRead.model_validate(d) for d in result.scalars().all()]
 
 
 @router.post("", response_model=DropdownRead, status_code=201)
