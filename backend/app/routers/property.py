@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.models.property import Property
+from app.models.user import User
 from app.schemas.property import PropertyCreate, PropertyRead, PropertyUpdate
 from app.schemas.common import Page
 from app.pagination import paginate
@@ -19,7 +20,7 @@ async def list_properties(
     per_page: int = Query(10, ge=1, le=100),
     search: str = "",
     db: AsyncSession = Depends(get_db),
-    _=Depends(require_role(Role.ADMIN, Role.MANAGER, Role.AGENT)),
+    current_user: User = Depends(require_role(Role.ADMIN, Role.MANAGER, Role.AGENT)),
 ):
     stmt = select(Property).order_by(Property.created_at.desc())
     if search:
@@ -27,6 +28,8 @@ async def list_properties(
         stmt = stmt.where(
             or_(Property.title.ilike(like), Property.location.ilike(like))
         )
+    if current_user.role == Role.AGENT:
+        stmt = stmt.where(Property.agent_id == current_user.id)
     items, total, pages = await paginate(db, stmt, page, per_page)
     return Page(items=items, total=total, page=page, per_page=per_page, pages=pages)
 
@@ -35,12 +38,14 @@ async def list_properties(
 async def get_property(
     property_id: str,
     db: AsyncSession = Depends(get_db),
-    _=Depends(require_role(Role.ADMIN, Role.MANAGER, Role.AGENT)),
+    current_user: User = Depends(require_role(Role.ADMIN, Role.MANAGER, Role.AGENT)),
 ):
     result = await db.execute(select(Property).where(Property.id == property_id))
     prop = result.scalar_one_or_none()
     if not prop:
         raise HTTPException(404, detail="Property not found")
+    if current_user.role == Role.AGENT and prop.agent_id != current_user.id:
+        raise HTTPException(403, detail="Property not assigned to you")
     return prop
 
 

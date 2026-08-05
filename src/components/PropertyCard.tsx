@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-  import { MapPin, Bed, Bath, Square, Edit2, Trash2, ChevronLeft, ChevronRight, Image as ImageIcon, Building2 } from "lucide-react";
+  import { MapPin, Bed, Bath, Square, Edit2, Trash2, ChevronLeft, ChevronRight, Image as ImageIcon, Building2, UserRound } from "lucide-react";
 import { useState } from "react";
 import { useDropdownOptions } from "@/lib/dropdowns";
 import { statusBadgeStyle } from "@/lib/statuses";
@@ -20,10 +20,14 @@ interface PropertyCardProps {
   featured?: boolean;
   projectId?: string;
   projects?: { id: string; name: string }[];
+  agentId?: string;
+  agentName?: string;
+  agents?: { id: string; name: string }[];
   onViewDetails?: (id: string) => void;
   onEdit?: (id: string) => void;
   onDelete?: (id: string) => void;
   onLinkProject?: (id: string, projectId: string) => void;
+  onAssignAgent?: (id: string, agentId: string) => void;
 }
 
 export function PropertyCard({
@@ -40,10 +44,14 @@ export function PropertyCard({
   featured = false,
   projectId,
   projects = [],
+  agentId,
+  agentName,
+  agents = [],
   onViewDetails,
   onEdit,
   onDelete,
   onLinkProject,
+  onAssignAgent,
 }: PropertyCardProps) {
   const [currentImage, setCurrentImage] = useState(0);
   const { options: propertyStatusOptions } = useDropdownOptions("property_status");
@@ -185,6 +193,33 @@ export function PropertyCard({
                 ))}
               </select>
             </div>
+          </div>
+        )}
+
+        {onAssignAgent && (
+          <div className="mt-3">
+            <div className="flex items-center gap-2">
+              <UserRound size={14} className="text-[#2563EB] shrink-0" />
+              <select
+                value={agentId || ""}
+                onClick={(e) => e.stopPropagation()}
+                onChange={(e) => { e.stopPropagation(); onAssignAgent(id, e.target.value); }}
+                className="w-full px-2 py-1.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg text-xs text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition-all appearance-none"
+              >
+                <option value="">{agentId && !agents.some((a) => a.id === agentId) ? `Agent: ${agentName || agentId}` : "Assign an agent…"}</option>
+                <option value="">No agent</option>
+                {agents.map((a) => (
+                  <option key={a.id} value={a.id}>{a.name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        )}
+
+        {agentName && !onAssignAgent && (
+          <div className="mt-3 flex items-center gap-2">
+            <UserRound size={14} className="text-[#2563EB] shrink-0" />
+            <span className="text-xs text-[#64748B] truncate">Assigned agent: <span className="font-medium text-[#0F172A]">{agentName}</span></span>
           </div>
         )}
 

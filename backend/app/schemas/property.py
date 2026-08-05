@@ -14,6 +14,8 @@ class PropertyBase(BaseModel):
     images: list[str] = []
     featured: bool = False
     project_id: str | None = None
+    agent_id: str | None = None
+    agent_name: str = ""
 
 
 class PropertyCreate(PropertyBase):
@@ -32,6 +34,8 @@ class PropertyUpdate(BaseModel):
     images: list[str] | None = None
     featured: bool | None = None
     project_id: str | None = None
+    agent_id: str | None = None
+    agent_name: str | None = None
 
 
 class PropertyRead(PropertyBase):

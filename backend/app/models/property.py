@@ -19,5 +19,7 @@ class Property(Base):
     images = Column(JSON, default=list)
     featured = Column(Boolean, default=False)
     project_id = Column(String, nullable=True)
+    agent_id = Column(String, nullable=True)
+    agent_name = Column(String, default="")
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

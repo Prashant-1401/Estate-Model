@@ -273,6 +273,20 @@ function DashboardContent() {
     }
   };
 
+  const handleAssignAgent = async (id: string, agentId: string) => {
+    try {
+      const agent = agents.find((a) => a.id === agentId);
+      await api.put(`/api/properties/${id}`, {
+        agent_id: agentId || null,
+        agent_name: agent ? agent.name : "",
+      });
+      await properties.reload();
+      showToast(agentId ? `Property assigned to ${agent?.name || agentId}` : "Property agent removed", "success");
+    } catch (e: unknown) {
+      showToast(e instanceof Error ? e.message : "Failed to assign agent", "error");
+    }
+  };
+
   const handleDelete = async (type: string, id: string) => {
     try {
       const endpoint = type === "lead" ? "leads" : type === "property" ? "properties" : type === "project" ? "projects" : null;
@@ -469,7 +483,11 @@ onAddLead={() => setDynamicForm({ entityType: "lead" })}
                       featured={property.featured}
                       projectId={property.project_id}
                       projects={allProjects}
+                      agentId={property.agent_id}
+                      agentName={property.agent_name}
+                      agents={agents}
                       onLinkProject={canManage ? handleLinkProject : undefined}
+                      onAssignAgent={canManage ? handleAssignAgent : undefined}
                       onViewDetails={(id) => {
                         const p = properties.items.find((pr) => pr.id === id);
                         if (p) setSelectedProperty(p);

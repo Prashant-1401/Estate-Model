@@ -74,6 +74,8 @@ export interface Property {
   images: string[];
   featured?: boolean;
   project_id?: string;
+  agent_id?: string;
+  agent_name?: string;
 }
 
 export interface DashboardStats {

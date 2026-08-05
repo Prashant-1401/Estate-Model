@@ -51,7 +51,10 @@ export function LeadAssignmentBoard() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [dragging, setDragging] = useState<string | null>(null);
+  const [dragLead, setDragLead] = useState<Lead | null>(null);
+  const [dragPos, setDragPos] = useState<{ x: number; y: number } | null>(null);
+  const [dragOffset, setDragOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [dragStart, setDragStart] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [dragOverLane, setDragOverLane] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -76,26 +79,34 @@ export function LeadAssignmentBoard() {
 
   const assignLead = useCallback(
     async (leadId: string, targetId: string | null) => {
+      const lead = leads.find((l) => l.id === leadId);
+      if (!lead) return;
       const agent = agents.find((a) => a.id === targetId);
       const targetName = agent ? agent.name : "Unassigned";
+      const previous = { assigned_to: lead.assigned_to, assigned: lead.assigned };
+      setLeads((prev) =>
+        prev.map((l) =>
+          l.id === leadId
+            ? { ...l, assigned_to: targetId ?? undefined, assigned: targetName }
+            : l
+        )
+      );
       try {
         await api.put(`/api/leads/${leadId}`, {
           assigned_to: targetId ?? null,
           assigned: targetName,
         });
-        setLeads((prev) =>
-          prev.map((l) =>
-            l.id === leadId
-              ? { ...l, assigned_to: targetId ?? undefined, assigned: targetName }
-              : l
-          )
-        );
         showToast(agent ? `Lead assigned to ${agent.name}` : "Lead unassigned", "success");
       } catch (e) {
+        setLeads((prev) =>
+          prev.map((l) =>
+            l.id === leadId ? { ...l, ...previous } : l
+          )
+        );
         showToast(e instanceof Error ? e.message : "Failed to assign lead", "error");
       }
     },
-    [agents, showToast]
+    [leads, agents, showToast]
   );
 
   const lanes = useMemo<AgentLane[]>(() => {
@@ -126,13 +137,56 @@ export function LeadAssignmentBoard() {
 
   const totalLeads = useMemo(() => leads.length, [leads]);
 
-  const handleDrop = (e: React.DragEvent, laneId: string | null) => {
-    e.preventDefault();
-    const id = e.dataTransfer.getData("text/plain") || dragging;
-    if (id) void assignLead(id, laneId);
-    setDragging(null);
+  const endDrag = useCallback(() => {
+    setDragLead(null);
+    setDragPos(null);
     setDragOverLane(null);
+  }, []);
+
+  const startDrag = (e: React.PointerEvent<HTMLDivElement>, lead: Lead) => {
+    if (e.button !== 0 && e.pointerType === "mouse") return;
+    const target = e.target as HTMLElement;
+    if (target.closest("select, button, a, input")) return;
+    e.preventDefault();
+    const rect = e.currentTarget.getBoundingClientRect();
+    setDragLead(lead);
+    setDragOffset({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+    setDragStart({ x: e.clientX, y: e.clientY });
+    setDragPos({ x: e.clientX, y: e.clientY });
   };
+
+  useEffect(() => {
+    if (!dragLead) return;
+    const onMove = (e: PointerEvent) => {
+      setDragPos({ x: e.clientX, y: e.clientY });
+      let over: string | null = null;
+      document.querySelectorAll<HTMLElement>("[data-lane-id]").forEach((el) => {
+        const r = el.getBoundingClientRect();
+        if (e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom) {
+          over = el.dataset.laneId ?? null;
+        }
+      });
+      setDragOverLane((cur) => (cur === over ? cur : over));
+    };
+    const onUp = (e: PointerEvent) => {
+      const moved = Math.hypot(e.clientX - dragStart.x, e.clientY - dragStart.y) >= 5;
+      const targetId = dragOverLane === "__unassigned__" ? null : dragOverLane;
+      const currentId = dragLead.assigned_to ?? null;
+      if (moved && dragOverLane !== null && targetId !== currentId) {
+        void assignLead(dragLead.id, targetId);
+      }
+      endDrag();
+    };
+    const onCancel = () => endDrag();
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onCancel);
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onCancel);
+    };
+  }, [dragLead, dragStart, dragOverLane, assignLead, endDrag]);
 
   if (loading && leads.length === 0) {
     return (
@@ -180,17 +234,13 @@ export function LeadAssignmentBoard() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.98 }}
-              onDragOver={(e) => {
-                e.preventDefault();
-                e.dataTransfer.dropEffect = "move";
-                setDragOverLane(lane.id ?? "__unassigned__");
-              }}
-              onDragLeave={() => setDragOverLane((cur) => (cur === (lane.id ?? "__unassigned__") ? null : cur))}
-              onDrop={(e) => handleDrop(e, lane.id)}
+              data-lane-id={lane.id ?? "__unassigned__"}
               className={`bg-white rounded-2xl border shadow-sm transition-all ${
                 dragOverLane === (lane.id ?? "__unassigned__")
-                  ? "border-[#2563EB] ring-2 ring-[#2563EB]/20"
-                  : "border-[#E2E8F0]"
+                  ? "border-[#2563EB] ring-2 ring-[#2563EB]/30"
+                  : dragLead
+                    ? "border-[#2563EB]/30"
+                    : "border-[#E2E8F0]"
               }`}
             >
               <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-[#E2E8F0]">
@@ -220,25 +270,17 @@ export function LeadAssignmentBoard() {
                 <div
                   className="m-4 py-10 border-2 border-dashed border-[#E2E8F0] rounded-xl text-center text-sm text-[#64748B]"
                 >
-                  No leads assigned
+                  {dragOverLane === (lane.id ?? "__unassigned__") ? "Release to assign here" : "No leads assigned"}
                 </div>
               ) : (
                 <div className="p-4 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
                   {lane.leads.map((lead) => (
                     <div
                       key={lead.id}
-                      draggable
-                      onDragStart={(e) => {
-                        e.dataTransfer.setData("text/plain", lead.id);
-                        e.dataTransfer.effectAllowed = "move";
-                        setDragging(lead.id);
-                      }}
-                      onDragEnd={() => {
-                        setDragging(null);
-                        setDragOverLane(null);
-                      }}
-                      className={`bg-white border border-[#E2E8F0] rounded-xl p-4 transition-all ${
-                        dragging === lead.id ? "opacity-50 scale-95" : "hover:shadow-md"
+                      onPointerDown={(e) => startDrag(e, lead)}
+                      style={{ touchAction: "none" }}
+                      className={`bg-white border border-[#E2E8F0] rounded-xl p-4 select-none cursor-grab active:cursor-grabbing transition-all ${
+                        dragLead?.id === lead.id ? "opacity-40 ring-2 ring-[#2563EB]/40" : "hover:shadow-md"
                       }`}
                     >
                       <div className="flex items-start justify-between gap-2 mb-2">
@@ -269,7 +311,7 @@ export function LeadAssignmentBoard() {
 
                       <div className="relative">
                         <select
-                          value={lane.id ?? ""}
+                          value={lane.id ?? "__unassigned__"}
                           onChange={(e) => {
                             const target = e.target.value === "__unassigned__" ? null : e.target.value;
                             void assignLead(lead.id, target);
@@ -298,6 +340,36 @@ export function LeadAssignmentBoard() {
           ))}
         </AnimatePresence>
       </div>
+
+      {dragLead && dragPos && (
+        <div
+          className="fixed z-[60] pointer-events-none w-72 select-none"
+          style={{ left: dragPos.x - dragOffset.x, top: dragPos.y - dragOffset.y }}
+        >
+          <div className="bg-white border-2 border-[#2563EB] rounded-xl shadow-2xl p-4 rotate-2">
+            <div className="flex items-start justify-between gap-2 mb-2">
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-[#0F172A] truncate">{dragLead.name}</p>
+                <p className="text-xs text-[#2563EB] font-medium">{dragLead.id}</p>
+              </div>
+              <span
+                className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border shrink-0"
+                style={statusBadgeStyle(statusColorMap[dragLead.status])}
+              >
+                {dragLead.status}
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5 text-xs text-[#64748B]">
+              <Phone size={12} />
+              <span>{dragLead.phone}</span>
+            </div>
+            <div className="flex items-center justify-between gap-2 text-xs text-[#64748B] mt-2">
+              {dragLead.budget ? <span className="font-medium text-[#0F172A]">{dragLead.budget}</span> : <span />}
+              {dragLead.area ? <span className="truncate">{dragLead.area}</span> : <span />}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
