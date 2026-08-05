@@ -334,7 +334,7 @@ All tables use string PKs + `created_at`/`updated_at`; **no ForeignKeys** — re
 
 Money is always text; `backend/app/money.py` parses "Cr/Lakh/M/K" strings (`parse_inr_price`, line 19) and formats back (`format_inr`, line 34). Only used by `dashboard.py` for `revenue_mtd`.
 
-Seed (`backend/app/seed.py`) is idempotent and runs at every startup: 3 demo users (line 323), 6 modules (118), 8 roles (129), permissions × 5 actions with per-role carve-outs (140), 14 lead statuses upserted by slug (183), 10 lead sources (199), 9 dashboard widgets (210), 4 notification templates (223), and sample data: 15 leads / 10 properties / 5 projects / 8 follow-ups, each record deduped by natural key (287–320).
+Seed (`backend/app/seed.py`) is idempotent and runs at every startup: 3 demo users, 6 modules, 8 roles, permissions × 5 actions with per-role carve-outs, 14 lead statuses upserted by slug, 10 lead sources, 9 dashboard widgets, and 4 notification templates, each record deduped by natural key. No business data (leads/properties/projects/follow-ups) is seeded.
 
 ---
 

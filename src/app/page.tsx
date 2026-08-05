@@ -22,6 +22,7 @@ import { EditLeadCard } from "@/components/EditLeadCard";
 import { EditPropertyCard } from "@/components/EditPropertyCard";
 import { EditProjectCard } from "@/components/EditProjectCard";
 import { KanbanBoard } from "@/components/KanbanBoard";
+import { LeadAssignmentBoard } from "@/components/LeadAssignmentBoard";
 import { ComponentBuilder } from "@/components/admin/ComponentBuilder";
 import { DynamicEntityForm } from "@/components/admin/DynamicEntityForm";
 import { Plus, Building2 as ProjectIcon, Edit2, Trash2, AlertTriangle, RefreshCw, Download } from "lucide-react";
@@ -107,6 +108,14 @@ function DashboardContent() {
       setActiveView("customers");
     }
   }, [leads.items, showToast]);
+
+  const navigateFromStat = useCallback((view: string, opts?: { status?: string; today?: boolean }) => {
+    if (view === "leads") {
+      leads.setStatus(opts?.status ?? "");
+      leads.setParams(opts?.today ? { today: "1" } : {});
+    }
+    setActiveView(view);
+  }, [leads]);
 
   useEffect(() => {
     let cancelled = false;
@@ -341,7 +350,7 @@ function DashboardContent() {
   const renderView = () => {
     switch (activeView) {
       case "dashboard":
-        return <ConfigurableDashboard onOpenLead={openLead} onAddLead={() => setDynamicForm({ entityType: "lead" })} stats={stats} onExport={handleExportDashboard} />;
+        return <ConfigurableDashboard onOpenLead={openLead} onAddLead={() => setDynamicForm({ entityType: "lead" })} stats={stats} onExport={handleExportDashboard} onNavigate={navigateFromStat} />;
       case "leads":
         return (
           <LeadsTable
@@ -596,6 +605,15 @@ onAddLead={() => setDynamicForm({ entityType: "lead" })}
             onOpenLead={openLead}
           />
         );
+      case "assignments":
+        if (!hasRole("admin", "manager")) {
+          return (
+            <div className="flex items-center justify-center h-[60vh] text-[#64748B]">
+              You do not have permission to view this page.
+            </div>
+          );
+        }
+        return <LeadAssignmentBoard />;
       case "settings":
         return (
           <div className="flex flex-col items-center justify-center h-[60vh] text-center">
@@ -619,7 +637,7 @@ onAddLead={() => setDynamicForm({ entityType: "lead" })}
           </div>
         );
       default:
-        return <ConfigurableDashboard onOpenLead={openLead} onAddLead={() => setDynamicForm({ entityType: "lead" })} stats={stats} />;
+        return <ConfigurableDashboard onOpenLead={openLead} onAddLead={() => setDynamicForm({ entityType: "lead" })} stats={stats} onNavigate={navigateFromStat} />;
     }
   };
 

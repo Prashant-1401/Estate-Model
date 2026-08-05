@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { 
   LayoutDashboard, Users, Building2, Settings, 
   HelpCircle, Search, Bell, ChevronDown, Menu, Plus,
-  FileText, X, LogOut, FolderTree, Shield, CheckSquare, LayoutGrid
+  FileText, X, LogOut, FolderTree, Shield, CheckSquare, LayoutGrid, UserCheck
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
@@ -26,6 +26,7 @@ const sidebarItems: SidebarItem[] = [
   { icon: Building2, label: "Properties", id: "properties" },
   { icon: FolderTree, label: "Projects", id: "projects" },
   { icon: CheckSquare, label: "Follow Ups", id: "follow-ups" },
+  { icon: UserCheck, label: "Assignments", id: "assignments", roles: ["admin", "manager"] },
   { icon: Shield, label: "Users", id: "users", roles: ["admin", "manager"] },
   { icon: Settings, label: "Settings", id: "settings", roles: ["admin", "manager"] },
   { icon: LayoutGrid, label: "Component Builder", id: "components", roles: ["admin"] },

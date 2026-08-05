@@ -23,15 +23,17 @@ interface StatWidgetProps {
   icon: string;
   color: string;
   trend?: string;
+  onClick?: () => void;
 }
 
-function StatWidget({ title, value, icon, color, trend }: StatWidgetProps) {
+function StatWidget({ title, value, icon, color, trend, onClick }: StatWidgetProps) {
   const Icon = WIDGET_ICONS[icon] || Users;
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm p-6 hover:shadow-md transition-shadow"
+      onClick={onClick}
+      className={`bg-white rounded-2xl border border-[#E2E8F0] shadow-sm p-6 hover:shadow-md transition-shadow ${onClick ? "cursor-pointer" : ""}`}
     >
       <div className="flex items-center justify-between">
         <div>
@@ -146,9 +148,10 @@ interface ConfigurableDashboardProps {
   onAddLead: () => void;
   onOpenLead?: (leadOrId: Lead | string) => void;
   onExport?: (stats: DashboardStats) => void;
+  onNavigate?: (view: string, opts?: { status?: string; today?: boolean }) => void;
 }
 
-export function ConfigurableDashboard({ stats, onAddLead, onOpenLead, onExport }: ConfigurableDashboardProps) {
+export function ConfigurableDashboard({ stats, onAddLead, onOpenLead, onExport, onNavigate }: ConfigurableDashboardProps) {
   const { showToast } = useToast();
   const { statuses } = useLeadStatuses();
   const statusColorMap = useMemo(
@@ -187,13 +190,25 @@ export function ConfigurableDashboard({ stats, onAddLead, onOpenLead, onExport }
   }, [loadDashboard]);
 
   const DEFAULT_STAT_WIDGETS = [
-    { title: "Total Leads", value: stats.total_leads, icon: "Users", color: "#3B82F6" },
-    { title: "Today's Leads", value: stats.today_leads, icon: "Calendar", color: "#10B981" },
-    { title: "Hot Leads", value: stats.hot_leads, icon: "Flame", color: "#EF4444" },
-    { title: "Total Properties", value: stats.total_properties, icon: "Building2", color: "#8B5CF6" },
-    { title: "Total Projects", value: stats.total_projects, icon: "FolderTree", color: "#F59E0B" },
-    { title: "Total Users", value: stats.total_users, icon: "Users", color: "#06B6D4" },
+    { title: "Total Leads", value: stats.total_leads, icon: "Users", color: "#3B82F6", onClick: () => onNavigate?.("leads") },
+    { title: "Today's Leads", value: stats.today_leads, icon: "Calendar", color: "#10B981", onClick: () => onNavigate?.("leads", { today: true }) },
+    { title: "Hot Leads", value: stats.hot_leads, icon: "Flame", color: "#EF4444", onClick: () => onNavigate?.("leads", { status: "Hot" }) },
+    { title: "Total Properties", value: stats.total_properties, icon: "Building2", color: "#8B5CF6", onClick: () => onNavigate?.("properties") },
+    { title: "Total Projects", value: stats.total_projects, icon: "FolderTree", color: "#F59E0B", onClick: () => onNavigate?.("projects") },
+    { title: "Total Users", value: stats.total_users, icon: "Users", color: "#06B6D4", onClick: () => onNavigate?.("users") },
   ];
+
+  const getStatAction = (title: string): (() => void) | undefined => {
+    switch (title) {
+      case "Total Leads": return () => onNavigate?.("leads");
+      case "Today's Leads": return () => onNavigate?.("leads", { today: true });
+      case "Hot Leads": return () => onNavigate?.("leads", { status: "Hot" });
+      case "Total Properties": return () => onNavigate?.("properties");
+      case "Total Projects": return () => onNavigate?.("projects");
+      case "Total Users": return () => onNavigate?.("users");
+      default: return undefined;
+    }
+  };
 
   const STAT_VALUES: Record<string, string | number> = {
     "Total Leads": stats.total_leads,
@@ -212,6 +227,7 @@ export function ConfigurableDashboard({ stats, onAddLead, onOpenLead, onExport }
       value: STAT_VALUES[w.name] ?? 0,
       icon: String(w.config?.icon || "Users"),
       color: String(w.config?.color || "#3B82F6"),
+      onClick: getStatAction(w.name),
     }));
   const tableEnabled = widgets.find((w) => w.widget_type === "table")?.is_active ?? true;
   const listEnabled = widgets.find((w) => w.widget_type === "list")?.is_active ?? true;

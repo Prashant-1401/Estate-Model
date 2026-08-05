@@ -21,6 +21,7 @@ export function usePaginatedData<T>(
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearchState] = useState("");
   const [status, setStatusState] = useState("");
+  const [params, setParams] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
@@ -37,10 +38,11 @@ export function usePaginatedData<T>(
     let cancelled = false;
     (async () => {
       try {
-        const params = new URLSearchParams({ page: String(page), per_page: String(perPage) });
-        if (search) params.set("search", search);
-        if (status) params.set("status", status);
-        const res = await api.get<Paginated<T>>(`${endpoint}?${params.toString()}`);
+        const query = new URLSearchParams({ page: String(page), per_page: String(perPage) });
+        if (search) query.set("search", search);
+        if (status) query.set("status", status);
+        for (const [key, value] of Object.entries(params)) query.set(key, value);
+        const res = await api.get<Paginated<T>>(`${endpoint}?${query.toString()}`);
         if (cancelled) return;
         setItems(res.items);
         setTotal(res.total);
@@ -60,7 +62,7 @@ export function usePaginatedData<T>(
       }
     })();
     return () => { cancelled = true; };
-  }, [endpoint, page, perPage, search, status, refreshKey]);
+  }, [endpoint, page, perPage, search, status, params, refreshKey]);
 
   const reload = useCallback(() => {
     setLoading(true);
@@ -89,6 +91,8 @@ export function usePaginatedData<T>(
     setSearch: setSearchInput,
     status,
     setStatus,
+    params,
+    setParams,
     loading,
     error,
     reload,

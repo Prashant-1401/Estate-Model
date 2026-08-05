@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -23,6 +25,7 @@ async def list_leads(
     per_page: int = Query(10, ge=1, le=100),
     search: str = "",
     status: str = "",
+    today: bool = False,
     db: AsyncSession = Depends(get_db),
     _=Depends(require_role(Role.ADMIN, Role.MANAGER, Role.AGENT)),
 ):
@@ -34,6 +37,9 @@ async def list_leads(
         )
     if status:
         stmt = stmt.where(Lead.status == status)
+    if today:
+        today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+        stmt = stmt.where(Lead.created_at >= today_start)
     items, total, pages = await paginate(db, stmt, page, per_page)
     return Page(items=items, total=total, page=page, per_page=per_page, pages=pages)
 
