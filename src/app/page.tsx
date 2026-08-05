@@ -18,6 +18,7 @@ import { PropertyCard } from "@/components/PropertyCard";
 import { PropertyDetailCard } from "@/components/PropertyDetailCard";
 import { UsersTable } from "@/components/UsersTable";
 import { AddUserCard } from "@/components/AddUserCard";
+import { EditUserCard } from "@/components/EditUserCard";
 import { EditLeadCard } from "@/components/EditLeadCard";
 import { EditPropertyCard } from "@/components/EditPropertyCard";
 import { EditProjectCard } from "@/components/EditProjectCard";
@@ -47,6 +48,7 @@ function DashboardContent() {
   const [loading, setLoading] = useState(true);
   const [dynamicForm, setDynamicForm] = useState<{ entityType: FormEntityType } | null>(null);
   const [isAddUserOpen, setIsAddUserOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<UserData | null>(null);
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
   const [editingProperty, setEditingProperty] = useState<Property | null>(null);
@@ -324,6 +326,16 @@ function DashboardContent() {
     }
   };
 
+  const handleEditUser = async (id: string, data: Record<string, string>) => {
+    try {
+      await api.put(`/api/users/${id}`, data);
+      await users.reload();
+      showToast("User updated successfully", "success");
+    } catch (e: unknown) {
+      showToast(e instanceof Error ? e.message : "Failed to update user", "error");
+    }
+  };
+
   const handleExportLeads = () => {
     exportLeadsToCSV(leads.items as Array<{
       id: string;
@@ -418,6 +430,7 @@ onAddLead={() => setDynamicForm({ entityType: "lead" })}
             statusFilter={users.status}
             onStatusFilterChange={users.setStatus}
             onAddUser={() => setIsAddUserOpen(true)}
+            onEditUser={(u) => setEditingUser(u as UserData)}
             onUpdateRole={handleUpdateUserRole}
             onToggleStatus={handleToggleUserStatus}
             onExport={handleExportUsers}
@@ -708,6 +721,14 @@ onAddLead={() => setDynamicForm({ entityType: "lead" })}
         isOpen={isAddUserOpen}
         onClose={() => setIsAddUserOpen(false)}
         onSubmit={handleAddUser}
+      />
+
+      <EditUserCard
+        key={editingUser?.id ?? 'closed'}
+        isOpen={!!editingUser}
+        onClose={() => setEditingUser(null)}
+        onSubmit={handleEditUser}
+        user={editingUser}
       />
 
       <EditLeadCard

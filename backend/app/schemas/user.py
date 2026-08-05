@@ -21,6 +21,7 @@ class UserUpdate(BaseModel):
     phone: str | None = None
     role: str | None = None
     status: str | None = None
+    password: str | None = None
 
 
 class UserRead(UserBase):

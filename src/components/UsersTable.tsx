@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Search, Download, MoreHorizontal, Shield, UserCheck, UserX, AlertTriangle, RefreshCw } from "lucide-react";
+import { Search, Download, MoreHorizontal, Shield, UserCheck, UserX, Edit2, AlertTriangle, RefreshCw } from "lucide-react";
 import { Pagination } from "@/components/Pagination";
 import { exportUsersToCSV } from "@/lib/export";
 
@@ -31,6 +31,7 @@ interface UsersTableProps {
   statusFilter: string;
   onStatusFilterChange: (value: string) => void;
   onAddUser: () => void;
+  onEditUser?: (user: UserData) => void;
   onUpdateRole?: (id: string, role: string) => void;
   onToggleStatus?: (id: string, currentStatus: string) => void;
   onExport?: (users: UserData[]) => void;
@@ -58,6 +59,7 @@ export function UsersTable({
   statusFilter,
   onStatusFilterChange,
   onAddUser,
+  onEditUser,
   onUpdateRole,
   onToggleStatus,
   onExport,
@@ -188,6 +190,12 @@ export function UsersTable({
                           <>
                             <div className="fixed inset-0 z-10" onClick={() => setOpenMenu(null)} />
                             <div className="absolute right-0 top-full mt-1 w-40 bg-white rounded-xl shadow-xl border border-[#E2E8F0] py-2 z-20">
+                              <button onClick={() => { onEditUser?.(user); setOpenMenu(null); }}
+                                className="w-full flex items-center gap-2 px-4 py-2 text-sm text-[#0F172A] hover:bg-[#F8FAFC] transition-colors">
+                                <Edit2 size={14} />
+                                Edit User
+                              </button>
+                              <div className="border-t border-[#E2E8F0] my-1" />
                               <button onClick={() => { onUpdateRole?.(user.id, "admin"); setOpenMenu(null); }}
                                 className="w-full flex items-center gap-2 px-4 py-2 text-sm text-[#0F172A] hover:bg-[#F8FAFC] transition-colors">
                                 <Shield size={14} />
